@@ -1,0 +1,200 @@
+import {StyleSheet, Platform, Dimensions} from 'react-native';
+import {getStatusBarHeight} from '../../common';
+
+const deviceWidth = Dimensions.get('window').width;
+const deviceHeight = Dimensions.get('window').height;
+
+export default StyleSheet.create({
+  container: {
+    backgroundColor: '#fff',
+    flex: 1,
+    zIndex: 1,
+  },
+  statusBarHeight: {
+    paddingTop: Platform.OS === 'ios' ? 0 : getStatusBarHeight(),
+  },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? getStatusBarHeight() : 0,
+    marginTop: 20,
+    // paddingHorizontal: 16,
+  },
+  header1: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  iconBack: {
+    height: 18,
+    width: 18,
+    resizeMode: 'contain',
+    tintColor: '#000',
+  },
+  iconBackModal: {
+    height: 18,
+    width: 18,
+    resizeMode: 'contain',
+    tintColor: '#fff',
+  },
+  title: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 24,
+    lineHeight: 36,
+    flex: 1,
+    textAlign: 'center',
+  },
+  btnSubmit: {
+    marginTop: 32,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+    // backgroundColor: '#1180C3',
+  },
+  txtSubmit: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: '#fff',
+  },
+  iconMenu: {
+    height: 22,
+    width: 22,
+    resizeMode: 'contain',
+    tintColor: '#000',
+  },
+  subTitle: {
+    marginBottom: 8,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 20,
+  },
+  contentTitle: {
+    marginTop: 16,
+    fontFamily: 'Inter-Medium',
+    fontSize: 18,
+  },
+  description: {
+    marginTop: 8,
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+  },
+  modal: {
+    backgroundColor: '#fff',
+    margin: 0,
+    width: '80%',
+  },
+  viewModalMenu: {
+    width: (333 / 375) * deviceWidth,
+    height: deviceHeight,
+    backgroundColor: '#fff',
+    borderColor: '#1180C3',
+    borderRightWidth: 3,
+  },
+  viewHeaderModalMenu: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Platform.OS === 'ios' ? getStatusBarHeight() : 0,
+    marginTop: 25,
+    marginLeft: 16,
+  },
+  btnCloseMenu: {
+    backgroundColor: '#1180C3',
+    width: 47,
+    height: 39,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomLeftRadius: 6,
+    borderTopLeftRadius: 6,
+  },
+  line: {
+    width: (333 / 375) * deviceWidth - 32,
+    marginBottom: 30,
+    marginTop: 22,
+    backgroundColor: '#F0F0F0',
+    height: 1,
+    alignSelf: 'center',
+  },
+  txtSubSection: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#000',
+    fontWeight: '500',
+    marginLeft: 10,
+    justifyContent: 'flex-start',
+    flex: 1,
+  },
+  txtItemLession: {
+    flex: 1,
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#4E4E4E',
+    fontWeight: '300',
+    marginLeft: 10,
+    textTransform: 'uppercase',
+  },
+  totalHours: {
+    fontFamily: 'Inter-ExtraLight',
+    fontSize: 10,
+    color: '#8F8F8F',
+    fontWeight: '300',
+    marginLeft: 10,
+  },
+  iconPreview: {
+    fontSize: 16,
+    color: '#bbbdbf',
+    marginLeft: 5,
+  },
+  txtLength: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#000',
+    fontWeight: '500',
+    marginLeft: 10,
+  },
+  contentMenu: {
+    marginHorizontal: 16,
+  },
+  subSectionTitle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  video: {width: '100%', height: 300},
+  textFile: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+  },
+  iconFile: {
+    fontSize: 18,
+    color: '#1180C3',
+  },
+  containerVideo: {
+    width: '100%',
+    height: 250,
+    backgroundColor: 'black',
+  },
+  fullscreenContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'red',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullscreenVideo: {
+    width: '100%',
+    height: '100%',
+  },
+  fullscreenButton: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    padding: 10,
+  },
+});
