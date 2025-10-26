@@ -47,13 +47,15 @@ const customHTMLElementModels = {
 
 // --- fonts & style ---
 const systemFonts = [
-  'Inter',
-  'Inter-ExtraLight',
-  'Inter-Light',
-  'Inter-Medium',
-  'Inter-SemiBold',
-  'Inter-Bold',
-  'Inter-ExtraBold',
+  'NotoSansJP_100Thin',
+  'NotoSansJP_200ExtraLight', 
+  'NotoSansJP_300Light',
+  'NotoSansJP_400Regular',
+  'NotoSansJP_500Medium',
+  'NotoSansJP_600SemiBold',
+  'NotoSansJP_700Bold',
+  'NotoSansJP_800ExtraBold',
+  'NotoSansJP_900Black',
 ];
 
 const defaultBodyStyle = {

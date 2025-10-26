@@ -1,80 +1,45 @@
 import React, { forwardRef, memo, useRef } from 'react';
 import {
-  // ActivityIndicator,
   Dimensions,
-  FlatList,
-  Text,
-  TouchableOpacity,
+  FlatList
 } from 'react-native';
-import ItemEbook from './ItemEbook';
+import ItemCourse from './ItemCourse';
 
 const { width } = Dimensions.get('window');
 
-const ListEbook = memo(
-  forwardRef((props: any, ref) => {
+const ListCourses = memo(
+  forwardRef((props: any) => {
     const flatList = useRef(null);
-
     const {
       data,
       style,
       horizontal,
-      // showFooter,
+      showFooter,
       refreshing,
       refreshScreen,
       contentContainerStyle,
       scrollEnabled,
       ListEmptyComponent,
-      nextPage,
+      // nextPage,
       extraData,
     } = props;
-
     const renderItem = ({ item }: { item: any }) => {
-      return <ItemEbook item={item} />;
+      return <ItemCourse item={item} />;
     };
 
     const keyExtractor = (item: any) => String(item.id);
 
-    const onEndReached = () => {
-      if (!data) {
-        return;
-      }
-      if (data.length === 0) {
-        return;
-      }
-      if (nextPage) {
-        nextPage();
-      }
-    };
-
-    const ListFooter = () => {
-      if (horizontal) {
-        return (
-          <TouchableOpacity
-            style={{
-              width: 100,
-              height: 134,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: 'Inter-Medium',
-                fontWeight: '500',
-                fontSize: 12,
-                lineHeight: 18,
-              }}
-            >
-              All source
-            </Text>
-          </TouchableOpacity>
-        );
-      }
-      // if (showFooter) {
-      //   return <ActivityIndicator size="small" />;
-      // }
-      return null;
-    };
+    // const onEndReached = () => {
+    //   if (!data) {
+    //     return;
+    //   }
+    //   if (data.length === 0) {
+    //     return;
+    //   }
+    //   if (nextPage) {
+    //     nextPage();
+    //   }
+    // };
 
     return (
       <FlatList
@@ -90,11 +55,10 @@ const ListEbook = memo(
         data={data}
         extraData={extraData}
         renderItem={renderItem}
-        onEndReached={onEndReached}
+        // onEndReached={onEndReached}
         keyExtractor={keyExtractor} // Performance purpose
         removeClippedSubviews
         onEndReachedThreshold={0.5}
-        ListFooterComponent={ListFooter}
         ListEmptyComponent={ListEmptyComponent}
         scrollEventThrottle={1}
         numColumns={width > 600 ? 2 : 1}
@@ -103,4 +67,4 @@ const ListEbook = memo(
   }),
   () => false,
 );
-export default ListEbook;
+export default ListCourses;

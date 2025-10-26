@@ -1,73 +1,93 @@
-import { Images } from '@/assets';
-import FirstRegisterStep from '@/components/Register/FirstStep';
-import SecondRegisterStep from '@/components/Register/SecondStep';
-import ThirdRegisterStep from '@/components/Register/ThirdStep';
-import { useNavigation } from 'expo-router';
+import Services from '@/services';
+import { useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Alert,
   Dimensions,
-  Image,
-  ScrollView,
+  Keyboard,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import {
+  CodeField,
+  Cursor,
+  useBlurOnFulfill,
+  useClearByFocusCell,
+} from 'react-native-confirmation-code-field';
 
-const STEPS = [
-  { Component: FirstRegisterStep },
-  { Component: SecondRegisterStep },
-  { Component: ThirdRegisterStep },
-];
+const CELL_COUNT = 5;
 
 const deviceWidth = Dimensions.get('window').width;
 const deviceHeight = Dimensions.get('window').height;
 
-const Register = () => {
-  const [step, setStep] = useState(0);
-  const [userID, setUserID] = useState(undefined);
-  const { Component } = STEPS[step];
+const SecondRegisterStep = ({ setStep, userID }: any) => {
   const navigation = useNavigation();
 
-  const onBack = () => {
-    if (step > 0) {
-      setStep(step - 1);
-    } else if (navigation.canGoBack()) {
-      navigation.goBack();
+  const [value, setValue] = useState('');
+  const ref = useBlurOnFulfill({ value, cellCount: CELL_COUNT });
+  const [props, getCellOnLayoutHandler] = useClearByFocusCell({
+    value,
+    setValue,
+  });
+
+  const handleOTPStep = async () => {
+    Keyboard.dismiss();
+
+    const params = {
+      user_id: userID,
+      code: value,
+    };
+    const response: any = await Services.secondRegisterStep(params);
+
+    if (response && response?.data?.success) {
+      Alert.alert('Đăng ký thành công');
+      router.replace('/auth/login');
+    } else {
+      Alert.alert('', 'Mã OTP không đúng');
     }
-    return true;
   };
 
   return (
-    <KeyboardAwareScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="always"
-    >
-      <View style={{ marginTop: 80 }}>
-        <TouchableOpacity
-          style={{ marginLeft: 16, width: 50 }}
-          onPress={onBack}
-        >
-          <Image source={Images.iconBack} style={styles.iconBack} />
-        </TouchableOpacity>
-        <View style={styles.viewLogo}>
-          <Image source={Images.LogoSchool} style={styles.logo} />
-          <Text style={styles.title}>Đăng ký</Text>
-        </View>
-      </View>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Component {...{ setStep, userID, setUserID }} />
-      </ScrollView>
-    </KeyboardAwareScrollView>
+    <View style={{ paddingHorizontal: 46, marginTop: 35 }}>
+      <Text style={{ textAlign: 'center', marginBottom: 16, fontSize: 16 }}>
+        Xác nhận mã OTP
+      </Text>
+      <CodeField
+        ref={ref}
+        {...props}
+        // Use `caretHidden={false}` when users can't paste a text value, because context menu doesn't appear
+        value={value}
+        onChangeText={setValue}
+        cellCount={CELL_COUNT}
+        rootstyle={styles.codeFieldRoot}
+        keyboardType="number-pad"
+        textContentType="oneTimeCode"
+        renderCell={({ index, symbol, isFocused }) => (
+          <View
+            key={index}
+            onLayout={getCellOnLayoutHandler(index)}
+            style={[styles.cellRoot, isFocused && styles.focusCell]}
+          >
+            <Text style={styles.cellText}>
+              {symbol || (isFocused ? <Cursor /> : null)}
+            </Text>
+          </View>
+        )}
+      />
+      <Text style={{ textAlign: 'center', marginVertical: 8, fontSize: 16 }}>
+        Vui lòng đợi mã OTP gửi về email của bạn
+      </Text>
+      <TouchableOpacity style={styles.btnSubmit} onPress={handleOTPStep}>
+        <Text style={styles.txtSubmit}>Tiếp tục</Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 
-export default Register;
+export default SecondRegisterStep;
 
 const styles = StyleSheet.create({
   container: {

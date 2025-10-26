@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, FlatList, StyleSheet } from 'react-native';
 
 // Skeleton FlatList opacity animation.
-const SkeletonFlatList = ({ items = 3, itemStyles }: any) => {
+const SkeletonFlatList = ({ items = 3, itemStyles, layout = 'row' }: any) => {
   const opacity = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
@@ -22,31 +22,47 @@ const SkeletonFlatList = ({ items = 3, itemStyles }: any) => {
     ).start();
   }, [opacity]);
 
-  // Return horizontal FlatList with animated opacity.
+  // Return FlatList with animated opacity based on layout.
+  const isHorizontal = layout === 'row';
+  
   return (
     <FlatList
-      horizontal
+      horizontal={isHorizontal}
       showsHorizontalScrollIndicator={false}
+      showsVerticalScrollIndicator={false}
       data={Array(items).fill('')}
       keyExtractor={(item, index) => index.toString()}
       renderItem={({ item, index }) => (
         <Animated.View
-          style={[{ ...styles.item, ...itemStyles }, { opacity }]}
+          style={[
+            isHorizontal ? styles.itemHorizontal : styles.itemVertical,
+            itemStyles,
+            { opacity }
+          ]}
         />
       )}
-      contentContainerStyle={{
-        paddingHorizontal: 10,
-      }}
+      contentContainerStyle={
+        isHorizontal 
+          ? { paddingHorizontal: 10 }
+          : { paddingHorizontal: 16, paddingTop: 20 }
+      }
     />
   );
 };
 
 const styles = StyleSheet.create({
-  item: {
+  itemHorizontal: {
     marginTop: 8,
     width: 220,
     height: 134,
     marginHorizontal: 4,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  itemVertical: {
+    marginTop: 16,
+    width: '100%',
+    height: 134,
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
   },

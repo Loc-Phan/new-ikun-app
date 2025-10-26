@@ -97,3 +97,23 @@ export function currencyFormat(num: number) {
   if (num)
     return num.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,') + ' đ';
 }
+
+export const ValidateEmail = (email: string) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+};
+
+export const getIDfromURL = (url: string) => {
+  const regExp =
+    /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+
+  const match = url.match(regExp);
+
+  if (match && match[2].length === 11) {
+    return match[2];
+  }
+
+  console.log('The supplied URL is not a valid youtube URL');
+
+  return '';
+}

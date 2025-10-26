@@ -9,7 +9,6 @@ import SkeletonFlatList from '@/components/SkeletonFlatList';
 import { WEB_URL } from '@/constants';
 import Services from '@/services';
 import { RootState } from '@/store';
-import { getStatusBarHeight } from '@/utils';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -18,7 +17,6 @@ import {
   Dimensions,
   Image,
   Linking,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -27,11 +25,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const user = useSelector((state: RootState) => state.auth.user);
+  const accessToken = useSelector((state: RootState) => state.auth.accessToken);
+  const dispatch = useDispatch();
   const [advertising, setAdvertising] = useState<any>([]);
   const [topCourseWithStudent, setTopCourseWithStudent] = useState<any>([]);
   const [dataNewCourse, setDataNewCourse] = useState<any>([]);
@@ -51,6 +51,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const onGetData = useCallback(async () => {
+    // dispatch(logout());
     setLoadingAdvertising(true);
     setLoadingTopCourses(true);
     setLoadingNewCourses(true);
@@ -141,7 +142,7 @@ export default function HomeScreen() {
 
   // 🧱 Render UI
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
       <View style={styles.container}>
         <ScrollView
           refreshControl={
@@ -157,10 +158,10 @@ export default function HomeScreen() {
               { flexDirection: 'row', justifyContent: 'flex-end' },
             ]}
           >
-            {!user?.token && (
+            {!accessToken && (
               <View style={styles.loginRegister}>
                 <TouchableOpacity
-                // onPress={() => navigation.navigate('LoginScreen')}
+                  onPress={() => navigation.navigate('auth/login')}
                 >
                   <Text style={styles.loginRegisterText}>Đăng nhập</Text>
                 </TouchableOpacity>
@@ -169,7 +170,7 @@ export default function HomeScreen() {
           </View>
 
           {/* User Info */}
-          {user?.token && (
+          {accessToken && (
             <View
               style={{
                 paddingHorizontal: 16,
@@ -183,13 +184,13 @@ export default function HomeScreen() {
                   style={styles.avatar}
                   source={{
                     uri:
-                      user?.info?.avatar ||
+                      user?.avatar ||
                       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMjCj43UJiVu-3Qp9b5yj-SwLGR-kndCzqLaiMv5SMkITd4CcbQQ7vX_CEZd-xxqka8ZM&usqp=CAU',
                   }}
                 />
                 <View style={{ marginLeft: 15 }}>
-                  <Text style={styles.fullname}>{user?.info?.full_name}</Text>
-                  <Text style={styles.email}>{user?.info?.email}</Text>
+                  <Text style={styles.fullname}>{user.full_name}</Text>
+                  <Text style={styles.email}>{user.email}</Text>
                 </View>
               </View>
               <View
@@ -350,11 +351,8 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     flex: 1,
-    paddingTop: Platform.OS !== 'ios' ? getStatusBarHeight() : 0,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? getStatusBarHeight() : 0,
-    marginTop: Platform.OS === 'ios' ? 0 : 20,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',

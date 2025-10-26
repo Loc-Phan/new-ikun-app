@@ -14,7 +14,7 @@ const http = axios.create({
 
 http.interceptors.request.use(
   async function (config) {
-    const token = (store.getState() as RootState).auth.user?.accessToken;
+    const token = (store.getState() as RootState).auth?.accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

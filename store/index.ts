@@ -3,13 +3,16 @@ import { persistStore, persistReducer } from 'redux-persist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import authReducer from './auth/authSlice';
 import onboardingReducer from './onboarding/onboardingSlice';
+import productIAPReducer from './productiap/productiapSlice';
 
 const authPersistConfig = { key: 'auth', storage: AsyncStorage };
 const onboardingPersistConfig = { key: 'onboarding', storage: AsyncStorage };
+const productIAPPersistConfig = { key: 'productIAP', storage: AsyncStorage };
 
 const reducer = combineReducers({
   auth: persistReducer(authPersistConfig, authReducer),
   onboarding: persistReducer(onboardingPersistConfig, onboardingReducer),
+  productIAP: persistReducer(productIAPPersistConfig, productIAPReducer),
 });
 
 export const store = configureStore({

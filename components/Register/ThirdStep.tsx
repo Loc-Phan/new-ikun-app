@@ -1,73 +1,76 @@
-import { Images } from '@/assets';
-import FirstRegisterStep from '@/components/Register/FirstStep';
-import SecondRegisterStep from '@/components/Register/SecondStep';
-import ThirdRegisterStep from '@/components/Register/ThirdStep';
-import { useNavigation } from 'expo-router';
+import Services from '@/services';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Alert,
   Dimensions,
-  Image,
-  ScrollView,
+  Keyboard,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-
-const STEPS = [
-  { Component: FirstRegisterStep },
-  { Component: SecondRegisterStep },
-  { Component: ThirdRegisterStep },
-];
 
 const deviceWidth = Dimensions.get('window').width;
 const deviceHeight = Dimensions.get('window').height;
 
-const Register = () => {
-  const [step, setStep] = useState(0);
-  const [userID, setUserID] = useState(undefined);
-  const { Component } = STEPS[step];
-  const navigation = useNavigation();
+const ThirdRegisterStep = ({ setStep, userID }: any) => {
+  const [fullname, setFullname] = useState<any>('');
 
-  const onBack = () => {
-    if (step > 0) {
-      setStep(step - 1);
-    } else if (navigation.canGoBack()) {
-      navigation.goBack();
+  const validate = () => {
+    if (!fullname || fullname.length === 0) {
+      Alert.alert('', 'Email không được để trống');
+      fullname.focus();
+      return false;
     }
     return true;
   };
 
+  const handleFinishStep = async () => {
+    if (!validate()) {
+      return;
+    }
+    Keyboard.dismiss();
+    const params = {
+      user_id: userID,
+      full_name: fullname,
+    };
+    const response = await Services.thirdRegisterStep(params);
+
+    if (response && response?.data?.success) {
+      Alert.alert('Đăng ký thành công');
+      router.replace('/auth/login');
+    } else {
+      Alert.alert('', response?.data?.message);
+    }
+  };
+
   return (
-    <KeyboardAwareScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="always"
-    >
-      <View style={{ marginTop: 80 }}>
-        <TouchableOpacity
-          style={{ marginLeft: 16, width: 50 }}
-          onPress={onBack}
-        >
-          <Image source={Images.iconBack} style={styles.iconBack} />
-        </TouchableOpacity>
-        <View style={styles.viewLogo}>
-          <Image source={Images.LogoSchool} style={styles.logo} />
-          <Text style={styles.title}>Đăng ký</Text>
-        </View>
-      </View>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        keyboardShouldPersistTaps="handled"
+    <View style={{ paddingHorizontal: 46, marginTop: 35 }}>
+      <View
+        style={[
+          styles.viewInput,
+          fullname.length > 0 ? { borderWidth: 2, borderColor: '#000' } : {},
+        ]}
       >
-        <Component {...{ setStep, userID, setUserID }} />
-      </ScrollView>
-    </KeyboardAwareScrollView>
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="Họ và tên"
+          placeholderTextColor="#9E9E9E"
+          style={styles.textInput}
+          onChangeText={value => setFullname(value)}
+        />
+      </View>
+      <TouchableOpacity style={styles.btnSubmit} onPress={handleFinishStep}>
+        <Text style={styles.txtSubmit}>Tiếp tục</Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 
-export default Register;
+export default ThirdRegisterStep;
 
 const styles = StyleSheet.create({
   container: {

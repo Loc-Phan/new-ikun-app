@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { login } from './authThunk';
+import { getProfile, login } from './authThunk';
 interface AuthState {
   user: any;
   accessToken: string | null;
@@ -23,9 +23,15 @@ const slice = createSlice({
   extraReducers: builder => {
     builder
       .addCase(login.fulfilled, (state, { payload }) => {
-        state.user = payload;
+        state.accessToken = payload;
       })
       .addCase(login.rejected, state => {
+        state.accessToken = null;
+      })
+      .addCase(getProfile.fulfilled, (state, { payload }) => {
+        state.user = payload;
+      })
+      .addCase(getProfile.rejected, state => {
         state.user = null;
       });
   },

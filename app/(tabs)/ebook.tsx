@@ -1,5 +1,7 @@
 import { Images } from '@/assets';
 import ListEbook from '@/components/ListEbook';
+import SkeletonCategory from '@/components/SkeletonCategory';
+import SkeletonFlatList from '@/components/SkeletonFlatList';
 import Services from '@/services';
 import { useFocusEffect } from '@react-navigation/native';
 import { useGlobalSearchParams, useNavigation } from 'expo-router';
@@ -37,15 +39,17 @@ export default function EbookScreen() {
   const [isLoadMore, setIsLoadMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showFooter, setShowFooter] = useState(false);
-
+  const [isProductLoading, setIsProductLoading] = useState(false);
   const [isFetchData, setIsFetchData] = useState(true);
 
   // =============== Fetch categories when mount ===============
   useEffect(() => {
     const fetchCategories = async () => {
+      setIsLoading(true);
       const categories = await Services.getEbooksCategories();
       setDataFilter(categories.data?.data?.categories || []);
       if (idCategory) setCategorySelect([idCategory]);
+      setIsLoading(false);
     };
     fetchCategories();
   }, [idCategory]);
@@ -128,17 +132,16 @@ export default function EbookScreen() {
       if (categorySelect.length > 0) {
         params.category_id = categorySelect;
       }
-
+      setIsProductLoading(true);
       const response = await Services.getEbooks(params);
+      setIsProductLoading(false);
       const products = response.data?.data?.products || [];
 
       setData(prev => (page === 1 ? products : [...prev, ...products]));
       setIsLoadMore(products.length === 10);
-      setIsLoading(false);
       setRefreshing(false);
     } catch (e) {
       console.log('Fetch Ebook Error:', e);
-      setIsLoading(false);
       setRefreshing(false);
     }
   }, [page, categorySelect, keySearch]);
@@ -150,7 +153,7 @@ export default function EbookScreen() {
     setRefreshing(true);
     setData([]);
     setPage(1);
-
+    setIsProductLoading(true);
     // Gọi API với state mới ngay lập tức
     try {
       const params: any = { page: 1 };
@@ -173,6 +176,7 @@ export default function EbookScreen() {
       setData(products);
       setIsLoadMore(products.length === 10);
       setRefreshing(false);
+      setIsProductLoading(false);
     } catch (e) {
       console.log('Fetch Ebook Error in refreshWithCate:', e);
       setRefreshing(false);
@@ -185,7 +189,6 @@ export default function EbookScreen() {
       : [...(categorySelect || []), item.id];
 
     setCategorySelect(selected);
-    setIsLoading(true);
     setData([]);
     setPage(1);
     setRefreshing(true);
@@ -205,17 +208,17 @@ export default function EbookScreen() {
       if (selected.length > 0) {
         params.category_id = selected;
       }
-
+      setIsProductLoading(true);
       const response = await Services.getEbooks(params);
+      setIsProductLoading(false);
       const products = response.data?.data?.products || [];
 
       setData(products);
       setIsLoadMore(products.length === 10);
-      setIsLoading(false);
       setRefreshing(false);
     } catch (e) {
       console.log('Fetch Ebook Error in handleSelectCate:', e);
-      setIsLoading(false);
+      setIsProductLoading(false);
       setRefreshing(false);
     }
   };
@@ -286,7 +289,7 @@ export default function EbookScreen() {
 
   // =============== Render ===============
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={[styles.header1]}>
@@ -305,7 +308,7 @@ export default function EbookScreen() {
         {/* Filter header */}
         <View
           style={{
-            marginTop: 26,
+            marginTop: 20,
             flexDirection: 'row',
             justifyContent: 'space-between',
             marginHorizontal: 16,
@@ -342,23 +345,19 @@ export default function EbookScreen() {
         </View>
 
         {/* Categories */}
-        <View style={{ marginTop: 26, marginHorizontal: 16 }}>
-          <FlatList
-            showsHorizontalScrollIndicator={false}
-            horizontal
-            data={dataFilter}
-            keyExtractor={item => String(Math.random())}
-            renderItem={renderItemFilter}
-          />
-        </View>
-
-        {/* {isLoading && (
-          <View style={{ marginTop: 50 }}>
-            <ActivityIndicator size="small" />
+        {!isLoading && (
+          <View style={{ marginTop: 20, marginHorizontal: 16 }}>
+            <FlatList
+              showsHorizontalScrollIndicator={false}
+              horizontal
+              data={dataFilter}
+              keyExtractor={item => String(Math.random())}
+              renderItem={renderItemFilter}
+            />
           </View>
-        )} */}
+        )}
 
-        {!isLoading && !refreshing && data.length === 0 && (
+        {!isProductLoading && !refreshing && data.length === 0 && (
           <Text
             style={[
               styles.txtFilterItem,
@@ -368,17 +367,21 @@ export default function EbookScreen() {
             Không có dữ liệu
           </Text>
         )}
-
-        <ListEbook
-          data={data}
-          extraData={{ data, refreshing }}
-          style={{ marginTop: 20 }}
-          contentContainerStyle={{ paddingBottom: 150 }}
-          refreshScreen={refreshScreen()}
-          nextPage={handleLoadMore}
-          refreshing={refreshing}
-          showFooter={showFooter}
-        />
+        {isLoading && <SkeletonCategory />}
+        {isProductLoading ? (
+          <SkeletonFlatList layout="column" items={5} />
+        ) : (
+          <ListEbook
+            data={data}
+            extraData={{ data, refreshing }}
+            style={{ marginTop: 20 }}
+            contentContainerStyle={{ paddingBottom: 80 }}
+            refreshScreen={refreshScreen()}
+            nextPage={handleLoadMore}
+            refreshing={refreshing}
+            showFooter={showFooter}
+          />
+        )}
 
         {/* {isShowFilter && (
           <TouchableWithoutFeedback onPress={() => setIsShowFilter(false)}>
