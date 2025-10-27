@@ -1,9 +1,9 @@
+import { router } from 'expo-router';
 import React, { useCallback } from 'react';
 import { DeviceEventEmitter, StyleSheet, TouchableOpacity } from 'react-native';
 import RenderDataHTML from '../RenderDataHTML';
 
 interface LearnTodayHorizontalProps {
-  navigation: any;
   item: {
     id: number;
     slug?: string;
@@ -12,17 +12,16 @@ interface LearnTodayHorizontalProps {
 }
 
 const LearnTodayHorizontal: React.FC<LearnTodayHorizontalProps> = ({
-  navigation,
   item,
 }) => {
   const handleNavigateDetail = useCallback(() => {
     if (item?.slug === 'ebook') {
-      navigation.navigate('Ebook');
+      router.push('/ebook');
     } else {
-      navigation.navigate('Courses');
+      router.push('/courses');
       DeviceEventEmitter.emit('refresh_with_category', item.id);
     }
-  }, [item, navigation]);
+  }, [item]);
 
   return (
     <TouchableOpacity
@@ -46,7 +45,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   title: {
-    
     fontSize: 14,
     color: '#0B2337',
     lineHeight: 20,

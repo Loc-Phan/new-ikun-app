@@ -3,9 +3,10 @@ import ListEbook from '@/components/ListEbook';
 import SkeletonCategory from '@/components/SkeletonCategory';
 import SkeletonFlatList from '@/components/SkeletonFlatList';
 import Services from '@/services';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useGlobalSearchParams, useNavigation } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   BackHandler,
@@ -16,6 +17,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -31,6 +33,8 @@ export default function EbookScreen() {
   const [isShowFilter, setIsShowFilter] = useState(false);
   const [page, setPage] = useState(1);
   const [data, setData] = useState([]);
+  const inputSearchRef = useRef<TextInput>(null);
+  const [showAnimatedSearch, setShowAnimatedSearch] = useState(false);
   const [filter, setFilter] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [dataFilter, setDataFilter] = useState([]);
@@ -252,6 +256,29 @@ export default function EbookScreen() {
     onRefresh();
   };
 
+  const onAnimatedSearch = () => {
+    setShowAnimatedSearch(true);
+    setTimeout(() => {
+      inputSearchRef.current?.focus();
+    }, 200);
+  };
+
+  const onCloseSearch = async () => {
+    if (isLoading || refreshing) return;
+    setShowAnimatedSearch(false);
+    setKeySearch('');
+    setData([]);
+    setPage(1);
+    await getData();
+  };
+
+  const onSearch = async () => {
+    if (isLoading || refreshing) return;
+    setData([]);
+    setPage(1);
+    await getData();
+  };
+
   // =============== Render Items ===============
   const renderItemFilter = ({ item }: any) => (
     <TouchableOpacity
@@ -292,17 +319,43 @@ export default function EbookScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={[styles.header1]}>
-            <Text style={styles.title}>Ebook</Text>
-            <TouchableOpacity
-              style={styles.viewSearch}
-              onPress={() => {
-                // navigation.navigate('EbookSearchScreen', { keySearch })
-              }}
-            >
-              <Image source={Images.iconSearch} style={styles.iconSearch} />
-            </TouchableOpacity>
-          </View>
+          {showAnimatedSearch ? (
+            <View style={styles.viewInput}>
+              <TouchableOpacity
+                hitSlop={hitSlop}
+                style={{ marginRight: 16 }}
+                onPress={onCloseSearch}
+              >
+                <MaterialIcons name="arrow-back" size={24} color="#000" />
+              </TouchableOpacity>
+              <TextInput
+                style={styles.inputSearch}
+                ref={inputSearchRef}
+                value={keySearch}
+                onChangeText={setKeySearch}
+                onSubmitEditing={onSearch}
+                returnKeyType="search"
+                placeholder="Tìm kiếm ebook..."
+              />
+              <TouchableOpacity
+                hitSlop={hitSlop}
+                onPress={onSearch}
+                disabled={isLoading || refreshing}
+              >
+                <MaterialIcons name="search" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={[styles.header1]}>
+              <Text style={styles.title}>Ebook</Text>
+              <TouchableOpacity
+                style={styles.viewSearch}
+                onPress={onAnimatedSearch}
+              >
+                <Image source={Images.iconSearch} style={styles.iconSearch} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Filter header */}
@@ -315,22 +368,6 @@ export default function EbookScreen() {
             alignItems: 'center',
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            {keySearch && (
-              <>
-                <Text numberOfLines={1} style={styles.txtSearch}>
-                  {`Tìm kiếm ${keySearch}`}
-                </Text>
-                <TouchableOpacity
-                  style={{ marginLeft: 6 }}
-                  hitSlop={hitSlop}
-                  onPress={onCloseKeywordSearch}
-                >
-                  {/* <IconI name="close" size={20} /> */}
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
 
           {/* <TouchableOpacity
             onPress={() => setIsShowFilter(!isShowFilter)}
@@ -461,7 +498,7 @@ const styles = StyleSheet.create({
   viewInput: {
     borderRadius: 12,
     width: deviceWidth - 32,
-    height: 40,
+    height: 48,
     backgroundColor: '#fff',
     paddingHorizontal: 12,
     flexDirection: 'row',
@@ -481,7 +518,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
 
     fontSize: 14,
-    lineHeight: 21,
     color: '#000',
   },
   iconBack: {

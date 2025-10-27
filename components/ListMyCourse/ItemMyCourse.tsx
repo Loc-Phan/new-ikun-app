@@ -16,7 +16,7 @@ export default function ItemMyCourse({ item }: ItemMyCourseProps) {
   const navigation = useNavigation<any>();
 
   const onNavigateDetail = (item: any) => {
-    // navigation.navigate('CoursesDetailsScreen', { id: item.id });
+    navigation.navigate('coursedetails', { id: item.id });
   };
 
   return (

@@ -1,9 +1,9 @@
+import { router } from 'expo-router';
 import React, { useCallback } from 'react';
 import { DeviceEventEmitter, StyleSheet, TouchableOpacity, View } from 'react-native';
 import RenderDataHTML from '../RenderDataHTML';
 
 interface LearnTodayVerticalProps {
-  navigation: any;
   item: {
     id: number;
     slug?: string;
@@ -11,15 +11,15 @@ interface LearnTodayVerticalProps {
   };
 }
 
-const LearnTodayVertical: React.FC<LearnTodayVerticalProps> = ({ navigation, item }) => {
-  const handleNavigateDetail = useCallback(() => {
-    if (item?.slug === 'ebook') {
-      navigation.navigate('Ebook');
-    } else {
-      navigation.navigate('Courses');
-      DeviceEventEmitter.emit('refresh_with_category', item.id);
-    }
-  }, [item, navigation]);
+const LearnTodayVertical: React.FC<LearnTodayVerticalProps> = ({item }) => {
+    const handleNavigateDetail = useCallback(() => {
+      if (item?.slug === 'ebook') {
+        router.push('/ebook');
+      } else {
+        router.push('/courses');
+        DeviceEventEmitter.emit('refresh_with_category', item.id);
+      }
+    }, [item]);
 
   return (
     <TouchableOpacity onPress={handleNavigateDetail} style={styles.container}>

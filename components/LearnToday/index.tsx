@@ -17,15 +17,14 @@ const LearnToday = memo(
       contentContainerStyle,
       scrollEnabled,
       ListEmptyComponent,
-      navigation,
     } = props;
 
     const renderItem = ({ item }: any) => {
       if (horizontal) {
-        return <LearnTodayHorizontal item={item} navigation={navigation} />;
+        return <LearnTodayHorizontal item={item} />;
       }
 
-      return <LearnTodayVertical item={item} navigation={navigation} />;
+      return <LearnTodayVertical item={item} />;
     };
 
     const keyExtractor = (item: any) => String(item.id);

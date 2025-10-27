@@ -26,10 +26,12 @@ const deviceHeight = Dimensions.get('window').height;
 
 const Login = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { screen, id }: { screen: string; id: string } = useGlobalSearchParams();
+  const { screen, id }: { screen: string; id: string } =
+    useGlobalSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation<any>();
 
   const usernameRef = useRef(null);
@@ -74,8 +76,9 @@ const Login = () => {
     }
 
     try {
+      setIsLoading(true);
       const result = await dispatch(login({ username, password }));
-      
+
       if (login.fulfilled.match(result)) {
         await dispatch(getProfile());
         if (screen) {
@@ -103,6 +106,8 @@ const Login = () => {
     } catch (error) {
       console.error('Login error:', error);
       Alert.alert('', 'Có lỗi xảy ra. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -196,8 +201,14 @@ const Login = () => {
                   </TouchableOpacity>
                 )}
               </View>
-              <TouchableOpacity style={styles.btnSubmit} onPress={onLogin}>
-                <Text style={styles.txtSubmit}>Đăng nhập</Text>
+              <TouchableOpacity
+                style={styles.btnSubmit}
+                onPress={onLogin}
+                disabled={isLoading}
+              >
+                <Text style={styles.txtSubmit}>
+                  {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate('auth/forgot-password')}

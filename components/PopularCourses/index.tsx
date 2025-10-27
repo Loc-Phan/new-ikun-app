@@ -1,3 +1,4 @@
+import { useNavigation } from 'expo-router';
 import React, { forwardRef, memo } from 'react';
 import { Animated, FlatList } from 'react-native';
 import PopularCoursesHorizontal from './PopularCoursesHorizontal';
@@ -14,8 +15,9 @@ const PopularCourses = memo(
       contentContainerStyle,
       scrollEnabled,
       ListEmptyComponent,
-      navigation,
     } = props;
+
+    const navigation = useNavigation<any>();
 
     const renderItem = ({ item }: any) => {
       return (
@@ -27,7 +29,7 @@ const PopularCourses = memo(
     };
 
     const onNavigateDetails = (item: any) => {
-      navigation.navigate('CoursesDetailsScreen', { id: item.id });
+      navigation.navigate('coursedetails', { id: item.id });
     };
 
     const keyExtractor = (item: any) => String(item.id);

@@ -189,8 +189,8 @@ export default function HomeScreen() {
                   }}
                 />
                 <View style={{ marginLeft: 15 }}>
-                  <Text style={styles.fullname}>{user.full_name}</Text>
-                  <Text style={styles.email}>{user.email}</Text>
+                  <Text style={styles.fullname}>{user?.full_name}</Text>
+                  <Text style={styles.email}>{user?.email}</Text>
                 </View>
               </View>
               <View
@@ -201,7 +201,7 @@ export default function HomeScreen() {
                 }}
               >
                 <TouchableOpacity
-                // onPress={() => navigation.navigate('ProfileScreen')}
+                  onPress={() => navigation.navigate('profile')}
                 >
                   <Image
                     source={Images.iconProfile}
@@ -209,7 +209,7 @@ export default function HomeScreen() {
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
-                // onPress={() => navigation.navigate('NotificationsScreen')}
+                  onPress={() => navigation.navigate('notifications')}
                 >
                   <Image
                     source={Images.iconNotification}

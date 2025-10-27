@@ -1,8 +1,5 @@
 import React, { forwardRef, memo, useRef } from 'react';
-import {
-  Dimensions,
-  FlatList
-} from 'react-native';
+import { Dimensions, FlatList, Text } from 'react-native';
 import ItemCourse from './ItemCourse';
 
 const { width } = Dimensions.get('window');
@@ -14,12 +11,10 @@ const ListCourses = memo(
       data,
       style,
       horizontal,
-      showFooter,
       refreshing,
       refreshScreen,
       contentContainerStyle,
       scrollEnabled,
-      ListEmptyComponent,
       // nextPage,
       extraData,
     } = props;
@@ -28,6 +23,23 @@ const ListCourses = memo(
     };
 
     const keyExtractor = (item: any) => String(item.id);
+
+    const ListEmptyComponent = () => {
+      return (
+        <Text
+          style={{
+            alignSelf: 'center',
+            marginTop: 50,
+            paddingBottom: 10,
+            fontSize: 12,
+            lineHeight: 18,
+            color: '#A9A9A9',
+          }}
+        >
+          Không có dữ liệu
+        </Text>
+      );
+    };
 
     // const onEndReached = () => {
     //   if (!data) {

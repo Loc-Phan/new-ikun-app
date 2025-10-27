@@ -29,7 +29,7 @@ const hitSlop = {
 
 export default function MyCourseScreen() {
   const navigation = useNavigation<any>();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const accessToken = useSelector((state: RootState) => state.auth.accessToken);
 
   const [isShowFilter, setIsShowFilter] = useState(false);
   const [showAnimatedSearch, setShowAnimatedSearch] = useState(false);
@@ -48,7 +48,8 @@ export default function MyCourseScreen() {
   // 📊 Get data
   const getData = useCallback(async (isLoadMoreData = false) => {
     try {
-      const response = await Services.myCourse();
+      const response = (await Services.myCourse()).data;
+      console.log("response",response);
       if (response?.data?.webinars) {
         const newData = response.data.webinars;
         setData(isLoadMoreData ? prev => [...prev, ...newData] : newData);
@@ -226,7 +227,7 @@ export default function MyCourseScreen() {
         )}
       </View>
 
-      {user?.token ? (
+      {accessToken ? (
         <>
           <View
             style={{

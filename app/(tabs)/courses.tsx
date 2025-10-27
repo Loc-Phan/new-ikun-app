@@ -6,7 +6,7 @@ import Services from '@/services';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useGlobalSearchParams, useNavigation } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   BackHandler,
@@ -17,6 +17,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -32,18 +33,15 @@ const deviceWidth = Dimensions.get('window').width;
 const deviceHeight = Dimensions.get('window').height;
 
 export default function CourseScreen() {
-  const [isShowFilter, setIsShowFilter] = useState(false);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<any[]>([]);
-  console.log('data', data);
-  const [filter, setFilter] = useState(0);
+  const inputSearchRef = useRef<TextInput>(null);
+  const [showAnimatedSearch, setShowAnimatedSearch] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [dataFilter, setDataFilter] = useState<any[]>([]);
   const [categorySelect, setCategorySelect] = useState<any[]>([]);
   const [keySearch, setKeySearch] = useState<any>(undefined);
   const [refreshing, setRefreshing] = useState(false);
-  const [showFooter, setShowFooter] = useState(false);
-  // const [isLoadMore, setIsLoadMore] = useState(true);
   const [isProductLoading, setIsProductLoading] = useState(false);
   const navigation = useNavigation();
 
@@ -84,19 +82,22 @@ export default function CourseScreen() {
     if (categorySelect.length > 0) {
       param.categories = categorySelect;
     }
+    console.log('param', param);
+    try {
+      setIsProductLoading(true);
+      const responses = await Services.course(param);
+      if (responses?.data) {
+        const response = responses.data?.data;
+        setData(response);
+      }
 
-    setIsProductLoading(true);
-    const responses = await Services.course(param);
-    if (responses?.data) {
-      const response = responses.data?.data;
-      console.log('response', response);
-      setData(response);
-      // setIsLoadMore(response?.length === 10);
+      setRefreshing(false);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsProductLoading(false);
     }
-
-    setRefreshing(false);
-    setIsProductLoading(false);
-  }, [page, categorySelect, keySearch, filter]);
+  }, [page, categorySelect, keySearch]);
 
   // --- Focus Listener ---
   useFocusEffect(
@@ -171,18 +172,56 @@ export default function CourseScreen() {
 
   const onSelectCate = async (item: any) => {
     setData([]);
-    setCategorySelect(prev =>
-      prev.includes(item.id)
-        ? prev.filter(x => x !== item.id)
-        : [...prev, item.id],
-    );
-    onRefresh();
+    const newCategorySelect = categorySelect.includes(item.id)
+      ? categorySelect.filter(x => x !== item.id)
+      : [...categorySelect, item.id];
+
+    setCategorySelect(newCategorySelect);
+
+    // Gọi getData với giá trị mới ngay lập tức
+    const param: any = { page: 1 };
+
+    if (keySearch) {
+      if (keySearch.length < 3) {
+        Alert.alert('Từ khóa có ít nhất 3 kí tự');
+        return;
+      }
+      param.title = keySearch;
+    }
+
+    if (newCategorySelect.length > 0) {
+      param.categories = newCategorySelect.join(',');
+    }
+
+    console.log('param onSelectCate', param);
+
+    try {
+      setIsProductLoading(true);
+      setRefreshing(true);
+      const responses = await Services.course(param);
+      if (responses?.data) {
+        const response = responses.data?.data;
+        setData(response);
+      }
+      setRefreshing(false);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsProductLoading(false);
+    }
   };
 
   const onCloseKeywordSearch = async () => {
     setData([]);
     setKeySearch(null);
     onRefresh();
+  };
+
+  const onAnimatedSearch = () => {
+    setShowAnimatedSearch(true);
+    setTimeout(() => {
+      inputSearchRef.current?.focus();
+    }, 200);
   };
 
   const renderItemFilter = ({ item }: { item: any }) => (
@@ -219,21 +258,63 @@ export default function CourseScreen() {
     />
   );
 
+  const onCloseSearch = async () => {
+    if (isLoading || refreshing) return;
+    setShowAnimatedSearch(false);
+    setKeySearch('');
+    setData([]);
+    setPage(1);
+    await getData();
+  };
+
+  const onSearch = async () => {
+    if (isLoading || refreshing) return;
+    setData([]);
+    setPage(1);
+    await getData();
+  };
+
   // --- Render ---
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <View style={styles.header1}>
-          <Text style={styles.title}>Khóa học</Text>
-          <TouchableOpacity
-            style={styles.viewSearch}
-            // onPress={() =>
-            //   navigation.navigate('CoursesSearchScreen', { keySearch })
-            // }
-          >
-            <Image source={Images.iconSearch} style={styles.iconSearch} />
-          </TouchableOpacity>
-        </View>
+        {showAnimatedSearch ? (
+          <View style={styles.viewInput}>
+            <TouchableOpacity
+              hitSlop={hitSlop}
+              style={{ marginRight: 16 }}
+              onPress={onCloseSearch}
+            >
+              <MaterialIcons name="arrow-back" size={24} color="#000" />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.inputSearch}
+              ref={inputSearchRef}
+              value={keySearch}
+              onChangeText={setKeySearch}
+              onSubmitEditing={onSearch}
+              returnKeyType="search"
+              placeholder="Tìm kiếm khóa học..."
+            />
+            <TouchableOpacity
+              hitSlop={hitSlop}
+              onPress={onSearch}
+              disabled={isLoading || refreshing}
+            >
+              <MaterialIcons name="search" size={24} color="#000" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.header1}>
+            <Text style={styles.title}>Khóa học của tôi</Text>
+            <TouchableOpacity
+              style={styles.viewSearch}
+              onPress={onAnimatedSearch}
+            >
+              <Image source={Images.iconSearch} style={styles.iconSearch} />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <View
@@ -245,22 +326,6 @@ export default function CourseScreen() {
           alignItems: 'center',
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-          {keySearch && (
-            <>
-              <Text numberOfLines={1} style={styles.txtSearch}>
-                {`Tìm kiếm ${keySearch}`}
-              </Text>
-              <TouchableOpacity
-                style={{ marginLeft: 6 }}
-                hitSlop={hitSlop}
-                onPress={onCloseKeywordSearch}
-              >
-                <MaterialIcons name="close" size={24} color="black" />
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
         {/* <TouchableOpacity
           onPress={() => setIsShowFilter(!isShowFilter)}
           style={styles.viewFilter}
@@ -287,29 +352,27 @@ export default function CourseScreen() {
           />
         </View>
       )}
-
-      {!isProductLoading && !refreshing && data?.length === 0 && (
-        <Text
-          style={[styles.txtFilterItem, { alignSelf: 'center', marginTop: 50 }]}
-        >
-          Không có dữ liệu
-        </Text>
-      )}
       {isLoading && <SkeletonCategory />}
       {isProductLoading ? (
         <SkeletonFlatList layout="column" items={5} />
       ) : (
         <ListCourses
           data={data}
-          extraData={{ filter, categorySelect }}
+          extraData={{ categorySelect }}
           style={{ marginTop: 20 }}
           contentContainerStyle={{ paddingBottom: 80 }}
           refreshScreen={refreshScreen()}
           // nextPage={handleLoadMore}
           refreshing={refreshing}
-          showFooter={showFooter}
         />
       )}
+      {/* {!isProductLoading && data.length === 0 && (
+        <Text
+          style={[styles.txtFilterItem, { alignSelf: 'center', marginTop: 50 }]}
+        >
+          Không có dữ liệu
+        </Text>
+      )} */}
 
       {/* {isShowFilter && (
         <TouchableWithoutFeedback onPress={() => setIsShowFilter(false)}>
@@ -385,7 +448,8 @@ const styles = StyleSheet.create({
   viewInput: {
     borderRadius: 12,
     width: deviceWidth - 32,
-    height: 40,
+    height: 48,
+    paddingVertical: 4,
     backgroundColor: '#fff',
     paddingHorizontal: 12,
     flexDirection: 'row',
@@ -403,9 +467,7 @@ const styles = StyleSheet.create({
   inputSearch: {
     flex: 1,
     marginRight: 8,
-    fontFamily: 'Inter-Regular',
     fontSize: 14,
-    lineHeight: 21,
     color: '#000',
   },
   iconBack: {
