@@ -26,7 +26,6 @@ import {
   View,
 } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import * as RNIap from 'react-native-iap';
 import { Rating } from 'react-native-ratings';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -40,12 +39,12 @@ const deviceWidth = Dimensions.get('window').width;
 
 const EbookDetails = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
-  console.log('id12', id);
   const dispatch = useDispatch();
   const navigation = useNavigation<any>();
 
   // Redux selectors with proper typing
   const user = useSelector((state: RootState) => state.auth.user);
+  const accessToken = useSelector((state: RootState) => state.auth.accessToken);
   const transaction = useSelector(
     (state: RootState) => state.productIAP?.transaction || {},
   );
@@ -123,33 +122,34 @@ const EbookDetails = () => {
   // };
 
   const handleContactAssistant = async (name: string) => {
-    if (!user?.token) {
+    if (!accessToken) {
       notLoggedIn();
       return;
     }
-    if (Platform.OS === 'android') {
-      navigation.navigate('assistant', { id: id, name, type: 'ebook' });
-    } else {
-      try {
-        setIsLoading(true);
-        RNIap.requestPurchase({
-          sku: productId,
-        })
-          .then(async res => {
-            // call api to backend update purchase todo
-            await handleUpdatePurchaseBackend();
-            // call api to backend update purchase todo
-          })
-          .catch(err => {
-            console.log(err);
-          })
-          .finally(async () => {
-            setIsLoading(false);
-          });
-      } catch (error) {
-        Alert.alert('Có lỗi xảy ra trong quá trình mua, vui lòng thử lại');
-      }
-    }
+    navigation.navigate('assistant', { id: id, name, type: 'ebook' });
+    // if (Platform.OS === 'android') {
+    //   navigation.navigate('assistant', { id: id, name, type: 'ebook' });
+    // } else {
+    //   try {
+    //     setIsLoading(true);
+    //     RNIap.requestPurchase({
+    //       sku: productId,
+    //     })
+    //       .then(async res => {
+    //         // call api to backend update purchase todo
+    //         await handleUpdatePurchaseBackend();
+    //         // call api to backend update purchase todo
+    //       })
+    //       .catch(err => {
+    //         console.log(err);
+    //       })
+    //       .finally(async () => {
+    //         setIsLoading(false);
+    //       });
+    //   } catch (error) {
+    //     Alert.alert('Có lỗi xảy ra trong quá trình mua, vui lòng thử lại');
+    //   }
+    // }
   };
 
   const handleUpdatePurchaseBackend = async () => {
@@ -164,8 +164,8 @@ const EbookDetails = () => {
         handleGetInformationEbook();
         await dispatch(
           saveProductTransactionIAP({
-            username: user.info?.email, //change to username
-            productIds: (transaction[user.info?.email || ''] || []).filter(
+            username: user?.email, //change to username
+            productIds: (transaction[user?.email || ''] || []).filter(
               f => f !== productId,
             ),
           }),
@@ -175,7 +175,7 @@ const EbookDetails = () => {
         //when save failed transaction to redux and update when open this screen again
         await dispatch(
           pushProductTransactionIAP({
-            username: user.info?.email, //change to username
+            username: user?.email, //change to username
             productId: productId,
           }),
         );
@@ -290,17 +290,15 @@ const EbookDetails = () => {
           response?.data?.product?.files
         ) {
           if (response?.data?.product?.files?.length > 0) {
-            console.log(
-              'response?.data?.product?.files',
-              response?.data?.product?.files,
-            );
             setFile(response?.data?.product?.files[0]?.path);
           }
         }
-        if (user?.token && response?.data?.product?.price !== 0) {
+        if (accessToken && response?.data?.product?.price !== 0) {
           const res = (await Services.getPurchaseEbook()).data;
+          console.log('res', res?.data?.orders);
+          console.log('id', id);
           const filePath = res?.data?.orders?.filter(
-            item => item.product_id === id,
+            item => String(item.product_id) === String(id),
           );
           console.log('filePath', filePath);
           if (filePath.length > 0) {
@@ -309,26 +307,26 @@ const EbookDetails = () => {
               setFile(filePath[0]?.file[0]?.path);
             }
           } else {
-            if (Platform.OS === 'ios') {
-              if (transaction[user.info.email]?.includes(productIdTemp)) {
-                await handleUpdatePurchaseBackend();
-              } else {
-                // clear transactionIos to show purchase by username
-                await RNIap.clearTransactionIOS();
-                // get list products for function RNIap.requestPurchase
-                await RNIap.getProducts({
-                  skus: [productIdTemp],
-                })
-                  .then(res => {
-                    if (!res?.length) {
-                      setIosRNIapState(false);
-                    }
-                  })
-                  .catch(() => {
-                    setIosRNIapState(false);
-                  });
-              }
-            }
+            // if (Platform.OS === 'ios') {
+            //   if (transaction[user?.email]?.includes(productIdTemp)) {
+            //     await handleUpdatePurchaseBackend();
+            //   } else {
+            //     // clear transactionIos to show purchase by username
+            //     await RNIap.clearTransactionIOS();
+            //     // get list products for function RNIap.requestPurchase
+            //     await RNIap.getProducts({
+            //       skus: [productIdTemp],
+            //     })
+            //       .then(res => {
+            //         if (!res?.length) {
+            //           setIosRNIapState(false);
+            //         }
+            //       })
+            //       .catch(() => {
+            //         setIosRNIapState(false);
+            //       });
+            //   }
+            // }
           }
         }
         setIsLoading(false);
@@ -527,7 +525,7 @@ const EbookDetails = () => {
                 <TouchableOpacity
                   style={[styles.btnSubmit, { backgroundColor: '#1180C3' }]}
                   onPress={() => {
-                    navigation.navigate('PdfScreen', {
+                    navigation.navigate('pdf', {
                       title: ebookDetails?.title,
                       uri: `${WEB_URL}${file}`,
                     });
@@ -803,9 +801,7 @@ const EbookDetails = () => {
                           <ActivityIndicator size="small" color="#fff" />
                         </View>
                       ) : (
-                        <Text style={styles.txtReview}>
-                          {t('ebook.leaveReview')}
-                        </Text>
+                        <Text style={styles.txtReview}>Đánh giá</Text>
                       )}
                     </TouchableOpacity>
                   </View>

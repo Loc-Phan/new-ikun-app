@@ -1,3 +1,4 @@
+import { useNavigation } from 'expo-router';
 import React, { forwardRef, memo } from 'react';
 import { Animated, FlatList } from 'react-native';
 import ReviewHorizontal from './ReviewHorizontal';
@@ -14,16 +15,15 @@ const Review = memo(
       contentContainerStyle,
       scrollEnabled,
       ListEmptyComponent,
-      navigation,
     } = props;
-
+    const navigation = useNavigation();
     const renderItem = ({ item }: { item: any }) => (
       <ReviewHorizontal item={item} onNavigateDetails={onNavigateDetails} />
     );
 
     const onNavigateDetails = (item: any) => {
       navigation.navigate(
-        item?.type === 'ebook' ? 'EbooksDetailsScreen' : 'CoursesDetailsScreen',
+        item?.type === 'ebook' ? 'ebookdetails' : 'coursedetails',
         { id: item?.type === 'ebook' ? item.ebookId : item.course_id, tab: 2 },
       );
     };

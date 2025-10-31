@@ -25,7 +25,7 @@ const deviceHeight = Dimensions.get('window').height;
 
 const SecondRegisterStep = ({ setStep, userID }: any) => {
   const navigation = useNavigation();
-
+  const [loading, setLoading] = useState(false);
   const [value, setValue] = useState('');
   const ref = useBlurOnFulfill({ value, cellCount: CELL_COUNT });
   const [props, getCellOnLayoutHandler] = useClearByFocusCell({
@@ -35,19 +35,21 @@ const SecondRegisterStep = ({ setStep, userID }: any) => {
 
   const handleOTPStep = async () => {
     Keyboard.dismiss();
-
+    setLoading(true);
     const params = {
       user_id: userID,
       code: value,
     };
-    const response: any = await Services.secondRegisterStep(params);
-
-    if (response && response?.data?.success) {
+    console.log("params",params);
+    const response: any = (await Services.secondRegisterStep(params)).data;
+    console.log("response",response);
+    if (response && response?.success) {
       Alert.alert('Đăng ký thành công');
       router.replace('/auth/login');
     } else {
       Alert.alert('', 'Mã OTP không đúng');
     }
+    setLoading(false);
   };
 
   return (
@@ -80,8 +82,8 @@ const SecondRegisterStep = ({ setStep, userID }: any) => {
       <Text style={{ textAlign: 'center', marginVertical: 8, fontSize: 16 }}>
         Vui lòng đợi mã OTP gửi về email của bạn
       </Text>
-      <TouchableOpacity style={styles.btnSubmit} onPress={handleOTPStep}>
-        <Text style={styles.txtSubmit}>Tiếp tục</Text>
+      <TouchableOpacity style={styles.btnSubmit} onPress={handleOTPStep} disabled={loading}>
+        <Text style={styles.txtSubmit}>{loading ? 'Đang tải...' : 'Tiếp tục'}</Text>
       </TouchableOpacity>
     </View>
   );

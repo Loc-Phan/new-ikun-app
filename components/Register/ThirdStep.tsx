@@ -17,6 +17,7 @@ const deviceHeight = Dimensions.get('window').height;
 
 const ThirdRegisterStep = ({ setStep, userID }: any) => {
   const [fullname, setFullname] = useState<any>('');
+  const [loading, setLoading] = useState(false);
 
   const validate = () => {
     if (!fullname || fullname.length === 0) {
@@ -32,13 +33,14 @@ const ThirdRegisterStep = ({ setStep, userID }: any) => {
       return;
     }
     Keyboard.dismiss();
+    setLoading(true);
     const params = {
       user_id: userID,
       full_name: fullname,
     };
-    const response = await Services.thirdRegisterStep(params);
-
-    if (response && response?.data?.success) {
+    const response = (await Services.thirdRegisterStep(params)).data;
+    setLoading(false);
+    if (response && response?.success) {
       Alert.alert('Đăng ký thành công');
       router.replace('/auth/login');
     } else {
@@ -63,8 +65,14 @@ const ThirdRegisterStep = ({ setStep, userID }: any) => {
           onChangeText={value => setFullname(value)}
         />
       </View>
-      <TouchableOpacity style={styles.btnSubmit} onPress={handleFinishStep}>
-        <Text style={styles.txtSubmit}>Tiếp tục</Text>
+      <TouchableOpacity
+        style={styles.btnSubmit}
+        onPress={handleFinishStep}
+        disabled={loading}
+      >
+        <Text style={styles.txtSubmit}>
+          {loading ? 'Đang tải...' : 'Tiếp tục'}
+        </Text>
       </TouchableOpacity>
     </View>
   );

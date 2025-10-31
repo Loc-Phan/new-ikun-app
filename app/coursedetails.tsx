@@ -41,8 +41,8 @@ const CourseDetails = () => {
 
   // Redux selectors
   const user = useSelector((state: RootState) => state.auth?.user);
-
   const productIAP = useSelector((state: RootState) => state.productIAP);
+  const accessToken = useSelector((state: RootState) => state.auth?.accessToken);
 
   // State management - separated for better control
   const [course, setCourse] = useState<any>(null);
@@ -179,7 +179,6 @@ const CourseDetails = () => {
     // API 3: My Course (có thể bị 401 nếu chưa login)
     try {
       purchase = (await Services.myCourse()).data;
-      console.log('✅ My course loaded successfully');
     } catch (error: any) {
       console.log('❌ My course failed (có thể do chưa login):', error.message);
       // Không set purchase = null vì đã khởi tạo ở trên
@@ -192,7 +191,9 @@ const CourseDetails = () => {
 
     // Xử lý purchase status
     if (purchase && purchase?.data?.webinars) {
-      const res = purchase?.data?.webinars?.find(item => item.id === id);
+      console.log("id",id);
+      const res = purchase?.data?.webinars?.find(item => String(item.id) === id);
+      console.log('✅ My course loaded successfully',purchase?.data?.webinars);
       if (res) {
         setPurchase(true);
       } else {
@@ -272,7 +273,7 @@ const CourseDetails = () => {
   // Navigation methods
   const onNavigateLearning = useCallback(
     (item: any, index: number) => {
-      navigation.navigate('LearningScreen', {
+      navigation.navigate('learning', {
         id: item.id,
         idCourse: id,
       });
@@ -283,7 +284,7 @@ const CourseDetails = () => {
   // Contact/Purchase handler
   const handleContact = useCallback(
     async (courseId: string) => {
-      if (!user?.token) {
+      if (!accessToken) {
         return notLoggedIn();
       }
 
@@ -301,7 +302,7 @@ const CourseDetails = () => {
         );
       }
     },
-    [user, course, navigation],
+    [accessToken, course],
   );
 
   // Login prompt

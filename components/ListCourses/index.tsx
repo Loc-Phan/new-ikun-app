@@ -1,12 +1,11 @@
-import React, { forwardRef, memo, useRef } from 'react';
+import React, { forwardRef, memo } from 'react';
 import { Dimensions, FlatList, Text } from 'react-native';
 import ItemCourse from './ItemCourse';
 
 const { width } = Dimensions.get('window');
 
 const ListCourses = memo(
-  forwardRef((props: any) => {
-    const flatList = useRef(null);
+  forwardRef((props: any, ref: any) => {
     const {
       data,
       style,
@@ -55,7 +54,7 @@ const ListCourses = memo(
 
     return (
       <FlatList
-        ref={flatList}
+        ref={ref}
         scrollEnabled={scrollEnabled}
         contentContainerStyle={contentContainerStyle}
         style={style}

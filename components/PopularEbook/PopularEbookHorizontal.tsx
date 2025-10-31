@@ -1,5 +1,6 @@
 import { Images } from '@/assets';
 import { currencyFormat } from '@/utils';
+import Fontisto from '@expo/vector-icons/Fontisto';
 import React, { memo, useCallback } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -45,22 +46,9 @@ const PopularEbookHorizontal: React.FC<PopularEbookHorizontalProps> = ({
       )}
 
       <View>
-        <Image style={styles.image} source={{ uri: item.thumbnail }} />
+        <Image style={styles.image} source={{ uri: item?.thumbnail }} />
 
-        {/* Wishlist toggle */}
-        {/* 
-        <TouchableOpacity
-          style={{position: 'absolute', top: 10, right: 15}}
-          onPress={onToggleWishlist}>
-          <IconI
-            name={isInWishlist ? 'heart' : 'heart-outline'}
-            color={isInWishlist ? '#FBC815' : '#fff'}
-            size={22}
-          />
-        </TouchableOpacity>
-        */}
-
-        {item?.rate && item?.rate > 0 && (
+        {item?.rate && item?.rate > 0 ? (
           <View
             style={{
               position: 'absolute',
@@ -70,10 +58,10 @@ const PopularEbookHorizontal: React.FC<PopularEbookHorizontalProps> = ({
               alignItems: 'center',
             }}
           >
-            {/* <IconI name="star" color="#FBC815" size={15} /> */}
-            <Text style={styles.rate}>{String(item.rate)}</Text>
+            <Fontisto name="star" size={15} color="#FBC815" />
+            <Text style={styles.rate}>{String(item?.rate)}</Text>
           </View>
-        )}
+        ) : null}
       </View>
 
       <View style={{ paddingHorizontal: 12, marginBottom: 8 }}>
@@ -157,7 +145,6 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   oldPrice: {
-    
     fontSize: 10,
     lineHeight: 15,
     color: '#B0B0B0',

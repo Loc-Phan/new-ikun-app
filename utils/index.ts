@@ -117,3 +117,11 @@ export const getIDfromURL = (url: string) => {
 
   return '';
 }
+
+export const detectNameFromURL = (url: string) => {
+  if (url) {
+    const array = url.split('/');
+    return array[array.length - 1];
+  }
+  return '';
+}

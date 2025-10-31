@@ -18,13 +18,13 @@ const deviceWidth = Dimensions.get('window').width;
 const deviceHeight = Dimensions.get('window').height;
 
 const FirstRegisterStep = ({ setStep, setUserID }: any) => {
-
   const [email, setEmail] = useState<any>('');
   const [fullName, setFullName] = useState<any>('');
   const [password, setPassword] = useState<any>('');
   const [confirmPassword, setConfirmPassword] = useState<any>('');
   const [showPassword, setShowPassword] = useState<any>('');
   const [showConfirmPassword, setShowConfirmPassword] = useState<any>('');
+  const [loading, setLoading] = useState(false);
 
   const validate = () => {
     if (!email || email.length === 0) {
@@ -66,8 +66,10 @@ const FirstRegisterStep = ({ setStep, setUserID }: any) => {
       password,
       password_confirmation: confirmPassword,
     };
-    const response: any = await Services.firstRegisterStep(params);
-    // console.log(response.data.errors.address);
+    setLoading(true);
+    const response: any = (await Services.firstRegisterStep(params)).data;
+    console.log(response);
+    setLoading(false);
 
     if (response && response?.success) {
       setUserID(response?.data?.user_id);
@@ -163,8 +165,14 @@ const FirstRegisterStep = ({ setStep, setUserID }: any) => {
           </TouchableOpacity>
         )}
       </View>
-      <TouchableOpacity style={styles.btnSubmit} onPress={handleEmailStep}>
-        <Text style={styles.txtSubmit}>Tiếp tục</Text>
+      <TouchableOpacity
+        style={styles.btnSubmit}
+        onPress={handleEmailStep}
+        disabled={loading}
+      >
+        <Text style={styles.txtSubmit}>
+          {loading ? 'Đang tải...' : 'Tiếp tục'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
