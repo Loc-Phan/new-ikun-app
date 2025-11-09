@@ -15,10 +15,19 @@ export const login = createAsyncThunk(
   ) => {
     try {
       const result = await Services.login({ username, password });
-      console.log("result.data?.data?.token",result.data?.data?.token);
-      if (result.data?.success) {
+      console.log('result.data?.data?.token', result.data);
+      if (result.data?.data?.token) {
         return result.data?.data?.token;
       }
+      if (result.data?.status === 'soft_deleted') {
+        console.log("123123")
+        return thunkAPI.rejectWithValue('soft_deleted');
+      }
+      return handleThunkError(
+        result.data?.data?.message,
+        'errors.auth.login_failed',
+        thunkAPI,
+      );
     } catch (error: any) {
       return handleThunkError(error, 'errors.auth.login_failed', thunkAPI);
     }
@@ -30,13 +39,17 @@ export const getProfile = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const result = await Services.getUser();
-      console.log("result",result.data?.data);
+      console.log('result', result.data?.data);
       if (result.data.success) {
         return result.data?.data?.user;
       }
     } catch (error: any) {
-      console.log("error",error);
-      return handleThunkError(error, 'errors.auth.get_profile_failed', thunkAPI);
+      console.log('error', error);
+      return handleThunkError(
+        error,
+        'errors.auth.get_profile_failed',
+        thunkAPI,
+      );
     }
   },
 );

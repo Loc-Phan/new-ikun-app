@@ -1,3 +1,6 @@
+import { FONTS } from '@/constants/fonts';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { store } from '@/store';
 import {
   DarkTheme,
   DefaultTheme,
@@ -9,11 +12,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { LogBox } from 'react-native';
+import { CaptureProtection } from 'react-native-capture-protection';
 import 'react-native-reanimated';
-
-import { FONTS } from '@/constants/fonts';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { store } from '@/store';
 import { Provider } from 'react-redux';
 
 export const unstable_settings = {
@@ -35,6 +35,10 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  useEffect(() => {
+    CaptureProtection.prevent();
+  }, []);
 
   if (!loaded) {
     return null;

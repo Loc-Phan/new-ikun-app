@@ -48,10 +48,12 @@ export default function ProfileScreen() {
         {
           text: 'Đồng ý',
           onPress: async () => {
-            if (user?.user_id) {
+            console.log("user",user)
+            if (user?.id) {
               const response = await Services.deleteAccount({
-                user_id: user?.user_id,
+                user_id: user?.id,
               });
+              console.log('response',response)
               if (response?.data?.success) {
                 dispatch(logout());
                 router.replace('/auth/login');

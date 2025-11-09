@@ -1,4 +1,4 @@
-package com.anonymous.ikun
+package com.zens.ikun
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

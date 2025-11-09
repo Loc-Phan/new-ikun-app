@@ -2,6 +2,10 @@ import { Images } from '@/assets';
 import RenderDataHTML from '@/components/RenderDataHTML';
 import { WEB_URL } from '@/constants';
 import Services from '@/services';
+import {
+  pushProductTransactionIAP,
+  saveProductTransactionIAP,
+} from '@/store/productiap/productiapSlice';
 import { currencyFormat, getIDfromURL } from '@/utils';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Fontisto from '@expo/vector-icons/Fontisto';
@@ -30,7 +34,7 @@ import * as RNIap from 'react-native-iap';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Rating } from 'react-native-ratings';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 
 const deviceWidth = Dimensions.get('window').width;
@@ -38,11 +42,13 @@ const deviceWidth = Dimensions.get('window').width;
 const CourseDetails = () => {
   const navigation = useNavigation<any>();
   const { id, tab } = useLocalSearchParams<{ id?: string; tab?: string }>();
-
+  const dispatch = useDispatch();
   // Redux selectors
   const user = useSelector((state: RootState) => state.auth?.user);
   const productIAP = useSelector((state: RootState) => state.productIAP);
-  const accessToken = useSelector((state: RootState) => state.auth?.accessToken);
+  const accessToken = useSelector(
+    (state: RootState) => state.auth?.accessToken,
+  );
 
   // State management - separated for better control
   const [course, setCourse] = useState<any>(null);
@@ -56,6 +62,7 @@ const CourseDetails = () => {
   // Purchase & Product States
   const [purchase, setPurchase] = useState(false);
   const [productId, setProductId] = useState('');
+  console.log('productId', productId);
   const [iosRNIapState, setIosRNIapState] = useState(true);
 
   // Review States
@@ -66,6 +73,7 @@ const CourseDetails = () => {
   const [purchaseQuality, setPurchaseQuality] = useState(5);
   const [supportQuantity, setSupportQuantity] = useState(5);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingPurchase, setLoadingPurchase] = useState(false);
 
   // Legacy states - removed unused ones
 
@@ -91,6 +99,7 @@ const CourseDetails = () => {
   const handleUpdatePurchaseBackend = useCallback(async () => {
     const { transaction } = productIAP;
     //change state purchase to true;
+    console.log('Đã mua');
     setPurchase(true);
 
     // call api backend
@@ -98,23 +107,23 @@ const CourseDetails = () => {
       webinar_id: id,
     })
       .then(async res => {
-        // await dispatch(
-        //   saveProductTransactionIAP({
-        //     username: user.info?.email, //change to username
-        //     productIds: (transaction[user.info?.email || ''] || []).filter(
-        //       f => f !== productId,
-        //     ),
-        //   }),
-        // );
+        await dispatch(
+          saveProductTransactionIAP({
+            username: user.info?.email, //change to username
+            productIds: (transaction[user.info?.email || ''] || []).filter(
+              f => f !== productId,
+            ),
+          }),
+        );
       })
       .catch(async () => {
-        //when save failed transaction to redux and update when open this screen again
-        // await dispatch(
-        //   pushProductTransactionIAP({
-        //     username: user.info?.email, //change to username
-        //     productId: productId,
-        //   }),
-        // );
+        // when save failed transaction to redux and update when open this screen again
+        await dispatch(
+          pushProductTransactionIAP({
+            username: user.info?.email, //change to username
+            productId: productId,
+          }),
+        );
       });
     // call api backend
   }, [id, productIAP, productId]);
@@ -128,7 +137,6 @@ const CourseDetails = () => {
         } else {
           try {
             await RNIap.initConnection();
-            console.log('connection react-native-iap');
 
             // clear transactionIos to show purchase by username
             await RNIap.clearTransactionIOS();
@@ -137,6 +145,8 @@ const CourseDetails = () => {
             const products = await RNIap.fetchProducts({ skus: [productId] });
             if (!products?.length) {
               setIosRNIapState(false);
+            } else {
+              setIosRNIapState(true);
             }
           } catch (error: any) {
             console.log(
@@ -147,7 +157,7 @@ const CourseDetails = () => {
         }
       }
     },
-    [user?.info?.email, productId, handleUpdatePurchaseBackend],
+    [user?.info?.email, productId],
   );
 
   // Data fetching
@@ -183,7 +193,7 @@ const CourseDetails = () => {
       console.log('❌ My course failed (có thể do chưa login):', error.message);
       // Không set purchase = null vì đã khởi tạo ở trên
     }
-
+    console.log('response?.data', response?.data?.link);
     // Xử lý dữ liệu nếu có
     if (response?.data) {
       setProductId(last(response?.data?.link?.split('/') || []));
@@ -191,9 +201,11 @@ const CourseDetails = () => {
 
     // Xử lý purchase status
     if (purchase && purchase?.data?.webinars) {
-      console.log("id",id);
-      const res = purchase?.data?.webinars?.find(item => String(item.id) === id);
-      console.log('✅ My course loaded successfully',purchase?.data?.webinars);
+      console.log('id', id);
+      const res = purchase?.data?.webinars?.find(
+        item => String(item.id) === id,
+      );
+      console.log('✅ My course loaded successfully', purchase?.data?.webinars);
       if (res) {
         setPurchase(true);
       } else {
@@ -295,14 +307,40 @@ const CourseDetails = () => {
           type: 'course',
         });
       } else {
-        // iOS purchase logic would go here
-        Alert.alert(
-          'Tính năng mua khóa học',
-          'Chức năng này đang được phát triển',
-        );
+        try {
+          if (!productId) {
+            Alert.alert('Lỗi', 'Mã sản phẩm không hợp lệ');
+            return;
+          }
+          setLoadingPurchase(true);
+          RNIap.requestPurchase({
+            request: {
+              ios: {
+                sku: productId,
+              },
+            },
+            type: 'in-app',
+          })
+            .then(async res => {
+              // console.log("res",res)
+              // call api to backend update purchase todo
+              // await handleUpdatePurchaseBackend();
+              // call api to backend update purchase todo
+            })
+            .catch(err => {
+              console.log(err);
+              Alert.alert('Lỗi', 'Đã xảy ra lỗi khi mua khóa học');
+            })
+            .finally(() => {
+              setLoadingPurchase(false);
+            });
+        } catch (error) {
+          Alert.alert('Lỗi', 'Đã xảy ra lỗi khi mua khóa học');
+          setLoadingPurchase(false);
+        }
       }
     },
-    [accessToken, course],
+    [accessToken, course, productId],
   );
 
   // Login prompt
@@ -504,6 +542,32 @@ const CourseDetails = () => {
       </View>
     );
   };
+
+  useEffect(() => {
+    const purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
+      async purchase => {
+        console.log('purchase updated:', purchase);
+
+        if (purchase.transactionId) {
+          await handleUpdatePurchaseBackend();
+
+          if (Platform.OS === 'ios') {
+            await RNIap.finishTransaction(purchase, false);
+          }
+        }
+      },
+    );
+
+    const purchaseErrorSubscription = RNIap.purchaseErrorListener(error => {
+      console.log('purchase error:', error);
+      Alert.alert('Lỗi', 'Thanh toán thất bại hoặc bị hủy');
+    });
+
+    return () => {
+      purchaseUpdateSubscription.remove();
+      purchaseErrorSubscription.remove();
+    };
+  }, []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -768,10 +832,15 @@ const CourseDetails = () => {
           <TouchableOpacity
             style={styles.btnAddToCart}
             onPress={() => handleContact(String(course?.id))}
+            disabled={isLoading || loadingPurchase}
           >
-            <Text style={styles.txtAddToCart}>
-              {Platform.OS === 'android' ? 'Liên hệ ngay' : 'Mua khóa học'}
-            </Text>
+            {isLoading || loadingPurchase ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.txtAddToCart}>
+                {Platform.OS === 'android' ? 'Liên hệ ngay' : 'Mua khóa học'}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       )}

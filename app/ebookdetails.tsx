@@ -26,6 +26,7 @@ import {
   View,
 } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import * as RNIap from 'react-native-iap';
 import { Rating } from 'react-native-ratings';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -64,8 +65,8 @@ const EbookDetails = () => {
   const [isCheck, setIsCheck] = useState(false);
   const [iosRNIapState, setIosRNIapState] = useState(true);
   const [file, setFile] = useState('');
-  console.log('price', ebookDetails?.price);
-  console.log('file', file);
+    const [loadingPurchase, setLoadingPurchase] = useState(false);
+
   const handleBackPress = () => {
     navigation.goBack(null);
     return true;
@@ -126,30 +127,39 @@ const EbookDetails = () => {
       notLoggedIn();
       return;
     }
-    navigation.navigate('assistant', { id: id, name, type: 'ebook' });
-    // if (Platform.OS === 'android') {
-    //   navigation.navigate('assistant', { id: id, name, type: 'ebook' });
-    // } else {
-    //   try {
-    //     setIsLoading(true);
-    //     RNIap.requestPurchase({
-    //       sku: productId,
-    //     })
-    //       .then(async res => {
-    //         // call api to backend update purchase todo
-    //         await handleUpdatePurchaseBackend();
-    //         // call api to backend update purchase todo
-    //       })
-    //       .catch(err => {
-    //         console.log(err);
-    //       })
-    //       .finally(async () => {
-    //         setIsLoading(false);
-    //       });
-    //   } catch (error) {
-    //     Alert.alert('Có lỗi xảy ra trong quá trình mua, vui lòng thử lại');
-    //   }
-    // }
+    // navigation.navigate('assistant', { id: id, name, type: 'ebook' });
+    if (Platform.OS === 'android') {
+      navigation.navigate('assistant', { id: id, name, type: 'ebook' });
+    } else {
+      try {
+        if (!productId) {
+          Alert.alert('Lỗi', 'Mã sản phẩm không hợp lệ');
+          return;
+        }
+        setLoadingPurchase(true);
+        RNIap.requestPurchase({
+          request: {
+            ios: {
+              sku: productId,
+            },
+          },
+          type: 'in-app',
+        })
+          .then(async res => {
+            // call api to backend update purchase todo
+            // await handleUpdatePurchaseBackend();
+            // call api to backend update purchase todo
+          })
+          .catch(err => {
+            console.log(err);
+          })
+          .finally(async () => {
+            setLoadingPurchase(false);
+          });
+      } catch (error) {
+        Alert.alert('Có lỗi xảy ra trong quá trình mua, vui lòng thử lại');
+      }
+    }
   };
 
   const handleUpdatePurchaseBackend = async () => {
@@ -307,26 +317,30 @@ const EbookDetails = () => {
               setFile(filePath[0]?.file[0]?.path);
             }
           } else {
-            // if (Platform.OS === 'ios') {
-            //   if (transaction[user?.email]?.includes(productIdTemp)) {
-            //     await handleUpdatePurchaseBackend();
-            //   } else {
-            //     // clear transactionIos to show purchase by username
-            //     await RNIap.clearTransactionIOS();
-            //     // get list products for function RNIap.requestPurchase
-            //     await RNIap.getProducts({
-            //       skus: [productIdTemp],
-            //     })
-            //       .then(res => {
-            //         if (!res?.length) {
-            //           setIosRNIapState(false);
-            //         }
-            //       })
-            //       .catch(() => {
-            //         setIosRNIapState(false);
-            //       });
-            //   }
-            // }
+            if (Platform.OS === 'ios') {
+              if (transaction[user?.email]?.includes(productIdTemp)) {
+                await handleUpdatePurchaseBackend();
+              } else {
+                await RNIap.initConnection();
+                // clear transactionIos to show purchase by username
+                await RNIap.clearTransactionIOS();
+                // get list products for function RNIap.requestPurchase
+                console.log("productIdTemp",productIdTemp)
+                await RNIap.fetchProducts({
+                  skus: [productIdTemp],
+                })
+                  .then(res => {
+                    if (!res?.length) {
+                      setIosRNIapState(false);
+                    } else {
+                      setIosRNIapState(true);
+                    }
+                  })
+                  .catch(() => {
+                    setIosRNIapState(false);
+                  });
+              }
+            }
           }
         }
         setIsLoading(false);
@@ -351,6 +365,32 @@ const EbookDetails = () => {
       },
     ]);
   };
+
+  useEffect(() => {
+    const purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
+      async purchase => {
+        console.log('purchase updated:', purchase);
+
+        if (purchase.transactionId) {
+          await handleUpdatePurchaseBackend();
+
+          if (Platform.OS === 'ios') {
+            await RNIap.finishTransaction(purchase, false);
+          }
+        }
+      },
+    );
+
+    const purchaseErrorSubscription = RNIap.purchaseErrorListener(error => {
+      console.log('purchase error:', error);
+      Alert.alert('Lỗi', 'Thanh toán thất bại hoặc bị hủy');
+    });
+
+    return () => {
+      purchaseUpdateSubscription.remove();
+      purchaseErrorSubscription.remove();
+    };
+  }, []);
 
   return (
     <SafeAreaView

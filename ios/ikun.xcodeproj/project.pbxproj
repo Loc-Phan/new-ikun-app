@@ -12,17 +12,19 @@
 		2DF6C427D5F1131C92EDD2C0 /* libPods-ikun.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1694DAC9CF520FB9FA96EB58 /* libPods-ikun.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		57EC4A5648E8D154ED0A0D44 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 850AD83F0BA9D32BF53A50E8 /* PrivacyInfo.xcprivacy */; };
+		762447602EC0888700363B3E /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7624475F2EC0888700363B3E /* StoreKit.framework */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		13B07F961A680F5B00A75B9A /* ikun.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ikun.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07F961A680F5B00A75B9A /* Ikun.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ikun.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ikun/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = ikun/Info.plist; sourceTree = "<group>"; };
 		1694DAC9CF520FB9FA96EB58 /* libPods-ikun.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ikun.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7624475F2EC0888700363B3E /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		7B88900197ADCB7E3E5B9575 /* Pods-ikun.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ikun.debug.xcconfig"; path = "Target Support Files/Pods-ikun/Pods-ikun.debug.xcconfig"; sourceTree = "<group>"; };
-		850AD83F0BA9D32BF53A50E8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = ikun/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		850AD83F0BA9D32BF53A50E8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = ikun/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = ikun/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		C561271C2BCFB6BB1F50F6F6 /* Pods-ikun.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ikun.release.xcconfig"; path = "Target Support Files/Pods-ikun/Pods-ikun.release.xcconfig"; sourceTree = "<group>"; };
@@ -38,6 +40,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2DF6C427D5F1131C92EDD2C0 /* libPods-ikun.a in Frameworks */,
+				762447602EC0888700363B3E /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -69,6 +72,7 @@
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				7624475F2EC0888700363B3E /* StoreKit.framework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				1694DAC9CF520FB9FA96EB58 /* libPods-ikun.a */,
 			);
@@ -100,7 +104,7 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* ikun.app */,
+				13B07F961A680F5B00A75B9A /* Ikun.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -111,7 +115,6 @@
 				7B88900197ADCB7E3E5B9575 /* Pods-ikun.debug.xcconfig */,
 				C561271C2BCFB6BB1F50F6F6 /* Pods-ikun.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -154,7 +157,7 @@
 			);
 			name = ikun;
 			productName = ikun;
-			productReference = 13B07F961A680F5B00A75B9A /* ikun.app */;
+			productReference = 13B07F961A680F5B00A75B9A /* Ikun.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -347,6 +350,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ikun/ikun.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U7SHFW8PVL;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -365,8 +369,8 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.ikun;
-				PRODUCT_NAME = ikun;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zens.ikun;
+				PRODUCT_NAME = Ikun;
 				SWIFT_OBJC_BRIDGING_HEADER = "ikun/ikun-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -383,6 +387,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ikun/ikun.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U7SHFW8PVL;
 				INFOPLIST_FILE = ikun/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -396,8 +401,8 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.ikun;
-				PRODUCT_NAME = ikun;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zens.ikun;
+				PRODUCT_NAME = Ikun;
 				SWIFT_OBJC_BRIDGING_HEADER = "ikun/ikun-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
