@@ -79,17 +79,25 @@ export default function EbookScreen() {
         onRefresh();
       },
     );
-    const cateListener = DeviceEventEmitter.addListener(
-      'refresh_with_category',
-      idCate => {
-        refreshWithCate(idCate);
-      },
-    );
     return () => {
       keywordListener.remove();
-      cateListener.remove();
     };
-  }, []);
+  }, [onRefresh]);
+
+  // =============== Handle Category Events when focused ===============
+  useFocusEffect(
+    useCallback(() => {
+      const cateListener = DeviceEventEmitter.addListener(
+        'refresh_with_category',
+        idCate => {
+          refreshWithCate(idCate);
+        },
+      );
+      return () => {
+        cateListener.remove();
+      };
+    }, [refreshWithCate]),
+  );
 
   // =============== Fetch when screen is focused ===============
   useFocusEffect(
@@ -98,7 +106,7 @@ export default function EbookScreen() {
         getData();
         setIsFetchData(false);
       }
-    }, [isFetchData, page, categorySelect, keySearch]),
+    }, [isFetchData, getData]),
   );
 
   // =============== Fetch Data ===============
@@ -151,7 +159,7 @@ export default function EbookScreen() {
   }, [page, categorySelect, keySearch]);
 
   // =============== Filter & Category ===============
-  const refreshWithCate = async (idCate: string) => {
+  const refreshWithCate = useCallback(async (idCate: string) => {
     const selected = idCate ? [idCate] : [];
     setCategorySelect(selected);
     setRefreshing(true);
@@ -171,21 +179,24 @@ export default function EbookScreen() {
       }
 
       if (selected.length > 0) {
-        params.category_id = selected;
+        params.categories = selected.join(',');
       }
 
-      const response = await Services.getEbooks(params);
-      const products = response.data?.data?.products || [];
+      console.log('params refreshWithCate', params);
 
-      setData(products);
-      setIsLoadMore(products.length === 10);
-      setRefreshing(false);
-      setIsProductLoading(false);
+      const responses = await Services.getEbooks(params);
+      if (responses?.data) {
+        const products = responses.data?.data?.products || [];
+        setData(products);
+        setIsLoadMore(products.length === 10);
+        setRefreshing(false);
+        setIsProductLoading(false);
+      }
     } catch (e) {
       console.log('Fetch Ebook Error in refreshWithCate:', e);
       setRefreshing(false);
     }
-  };
+  }, [keySearch]);
 
   const handleSelectCate = async (item: any) => {
     const selected = categorySelect?.includes(item.id)
@@ -235,13 +246,13 @@ export default function EbookScreen() {
     setShowFooter(false);
   };
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setPage(1);
     setData([]);
     await getData();
     setRefreshing(false);
-  };
+  }, [getData]);
 
   const handleFilter = async (value: number) => {
     setIsShowFilter(false);

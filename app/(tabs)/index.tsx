@@ -137,7 +137,7 @@ export default function HomeScreen() {
 
   // 📚 Navigate
   const navigateTotal = (type: 'course' | 'ebook') => {
-    // navigation.navigate(type === 'course' ? 'Courses' : 'Ebook');
+    navigation.navigate(type === 'course' ? 'courses' : 'ebooks');
   };
 
   // 🧱 Render UI

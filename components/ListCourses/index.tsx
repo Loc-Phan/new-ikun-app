@@ -14,14 +14,14 @@ const ListCourses = memo(
       refreshScreen,
       contentContainerStyle,
       scrollEnabled,
-      // nextPage,
+      nextPage,
       extraData,
     } = props;
     const renderItem = ({ item }: { item: any }) => {
       return <ItemCourse item={item} />;
     };
 
-    const keyExtractor = (item: any) => String(item.id);
+    const keyExtractor = (item: any) => String(Math.random());
 
     const ListEmptyComponent = () => {
       return (
@@ -40,17 +40,17 @@ const ListCourses = memo(
       );
     };
 
-    // const onEndReached = () => {
-    //   if (!data) {
-    //     return;
-    //   }
-    //   if (data.length === 0) {
-    //     return;
-    //   }
-    //   if (nextPage) {
-    //     nextPage();
-    //   }
-    // };
+    const onEndReached = () => {
+      if (!data) {
+        return;
+      }
+      if (data.length === 0) {
+        return;
+      }
+      if (nextPage) {
+        nextPage();
+      }
+    };
 
     return (
       <FlatList
@@ -66,7 +66,7 @@ const ListCourses = memo(
         data={data}
         extraData={extraData}
         renderItem={renderItem}
-        // onEndReached={onEndReached}
+        onEndReached={onEndReached}
         keyExtractor={keyExtractor} // Performance purpose
         removeClippedSubviews
         onEndReachedThreshold={0.5}

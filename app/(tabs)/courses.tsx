@@ -4,13 +4,10 @@ import SkeletonCategory from '@/components/SkeletonCategory';
 import SkeletonFlatList from '@/components/SkeletonFlatList';
 import Services from '@/services';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useFocusEffect } from '@react-navigation/native';
-import { useGlobalSearchParams, useNavigation } from 'expo-router';
+import { useGlobalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  BackHandler,
-  DeviceEventEmitter,
   Dimensions,
   FlatList,
   Image,
@@ -43,10 +40,11 @@ export default function CourseScreen() {
   const [keySearch, setKeySearch] = useState<any>(undefined);
   const [refreshing, setRefreshing] = useState(false);
   const [isProductLoading, setIsProductLoading] = useState(false);
-  const navigation = useNavigation();
+  const [showFooter, setShowFooter] = useState(false);
+  const [isLoadMore, setIsLoadMore] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const { idCategory }: { idCategory: string } = useGlobalSearchParams();
-  const [isFetchData, setIsFetchData] = useState(true);
 
   // --- Fetch Categories ---
   useEffect(() => {
@@ -56,111 +54,93 @@ export default function CourseScreen() {
       setIsLoading(false);
       setDataFilter(categories.data?.data?.categories || []);
       setCategorySelect(idCategory ? [idCategory] : []);
+      if (page !== 1) {
+        setPage(1);
+      }
     };
     fetchCategories();
   }, [idCategory]);
 
   // --- Fetch Courses ---
-  const getData = useCallback(async () => {
-    const param: any = { page };
+  const getData = useCallback(
+    async (isLoadMore = false) => {
+      const param: any = { page };
 
-    // if (filter === 1) param.sort = 'inexpensive';
-    // if (filter === 2) param.sort = 'expensive';
-    // if (filter === 3) param.sort = 'newest';
-    // if (filter === 4) param.sort = 'bestsellers';
-    // if (filter === 5) param.sort = 'best_rates';
-    // if (filter === 0) param.sort = '';
-
-    if (keySearch) {
-      if (keySearch.length < 3) {
-        Alert.alert('Từ khóa có ít nhất 3 kí tự');
-        return;
-      }
-      param.title = keySearch;
-    }
-
-    if (categorySelect.length > 0) {
-      param.categories = categorySelect;
-    }
-    console.log('param', param);
-    try {
-      setIsProductLoading(true);
-      const responses = await Services.course(param);
-      if (responses?.data) {
-        const response = responses.data?.data;
-        setData(response);
+      if (keySearch) {
+        if (keySearch.length < 3) {
+          Alert.alert('Từ khóa có ít nhất 3 kí tự');
+          return;
+        }
+        param.title = keySearch;
       }
 
-      setRefreshing(false);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setIsProductLoading(false);
-    }
-  }, [page, categorySelect, keySearch]);
-
-  // --- Focus Listener ---
-  useFocusEffect(
-    useCallback(() => {
-      if (isFetchData) {
-        getData();
-        setIsFetchData(false);
+      if (categorySelect.length > 0) {
+        param.categories = categorySelect.join(',');
       }
-    }, [getData, isFetchData]),
+      console.log('param', param);
+      try {
+        // Chỉ set isProductLoading cho initial loading
+        if (!isLoadMore) {
+          setIsProductLoading(true);
+          setIsInitialLoading(true);
+        }
+
+        const responses = await Services.course(param);
+        if (responses?.data) {
+          const response = responses.data?.data;
+          if (isLoadMore && page > 1) {
+            setData(prev => [...prev, ...response]);
+          } else {
+            setData(response);
+            setIsInitialLoading(false);
+          }
+          // Kiểm tra xem có thể load more không
+          setIsLoadMore(response.length === 10);
+        }
+
+        setRefreshing(false);
+      } catch (error) {
+        console.log(error);
+        setData([]);
+        setIsInitialLoading(false);
+      } finally {
+        setIsProductLoading(false);
+      }
+    },
+    [page, categorySelect, keySearch],
   );
 
-  // --- Event Listeners ---
+  // --- Focus Listener ---
   useEffect(() => {
-    const searchListener = DeviceEventEmitter.addListener(
-      'keywordSearch',
-      value => {
-        setKeySearch(value);
-        onRefresh();
-      },
-    );
+    if (page === 1) {
+      getData(false);
+    } else {
+      getData(true);
+    }
+  }, [page, categorySelect]);
 
-    const refreshWithCateListener = DeviceEventEmitter.addListener(
-      'refresh_with_category',
-      async idCate => {
-        setIsFetchData(false);
-        setCategorySelect([idCate]);
-        setRefreshing(true);
-        setData([]);
-        setPage(1);
-        await getData();
-      },
-    );
+  // --- Load More ---
+  const handleLoadMore = async () => {
+    if (!isLoadMore || isProductLoading) return;
+    setShowFooter(true);
+    setPage(prev => prev + 1);
+  };
 
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        navigation.goBack();
-        return true;
-      },
-    );
-
-    return () => {
-      searchListener.remove();
-      refreshWithCateListener.remove();
-      backHandler.remove();
-    };
-  }, [getData]);
+  // Ẩn footer khi load xong
+  useEffect(() => {
+    if (!isProductLoading && showFooter) {
+      setShowFooter(false);
+    }
+  }, [isProductLoading, showFooter]);
 
   // --- Refresh ---
   const onRefresh = async () => {
     setRefreshing(true);
     setPage(1);
     setData([]);
+    setIsInitialLoading(true); // Show loading cho refresh
     await getData();
   };
-
-  // --- Load More ---
-  // const handleLoadMore = async () => {
-  //   setShowFooter(true);
-  //   setPage(prev => prev + 1);
-  //   await getData();
-  //   setShowFooter(false);
-  // };
 
   // --- Filter Handling ---
   // const handleSetFilter = async (value: any) => {
@@ -171,51 +151,21 @@ export default function CourseScreen() {
   // };
 
   const onSelectCate = async (item: any) => {
-    setData([]);
     const newCategorySelect = categorySelect.includes(item.id)
       ? categorySelect.filter(x => x !== item.id)
       : [...categorySelect, item.id];
 
     setCategorySelect(newCategorySelect);
-
-    // Gọi getData với giá trị mới ngay lập tức
-    const param: any = { page: 1 };
-
-    if (keySearch) {
-      if (keySearch.length < 3) {
-        Alert.alert('Từ khóa có ít nhất 3 kí tự');
-        return;
-      }
-      param.title = keySearch;
-    }
-
-    if (newCategorySelect.length > 0) {
-      param.categories = newCategorySelect.join(',');
-    }
-
-    console.log('param onSelectCate', param);
-
-    try {
-      setIsProductLoading(true);
-      setRefreshing(true);
-      const responses = await Services.course(param);
-      if (responses?.data) {
-        const response = responses.data?.data;
-        setData(response);
-      }
-      setRefreshing(false);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setIsProductLoading(false);
-    }
+    setPage(1); // Reset page về 1 khi thay đổi filter
+    setIsLoadMore(true); // Reset load more state
+    setIsInitialLoading(true); // Show loading cho filter mới
   };
 
-  const onCloseKeywordSearch = async () => {
-    setData([]);
-    setKeySearch(null);
-    onRefresh();
-  };
+  // const onCloseKeywordSearch = async () => {
+  //   setData([]);
+  //   setKeySearch(null);
+  //   onRefresh();
+  // };
 
   const onAnimatedSearch = () => {
     setShowAnimatedSearch(true);
@@ -353,7 +303,7 @@ export default function CourseScreen() {
         </View>
       )}
       {isLoading && <SkeletonCategory />}
-      {isProductLoading ? (
+      {isInitialLoading ? (
         <SkeletonFlatList layout="column" items={5} />
       ) : (
         <ListCourses
@@ -362,8 +312,9 @@ export default function CourseScreen() {
           style={{ marginTop: 20 }}
           contentContainerStyle={{ paddingBottom: 80 }}
           refreshScreen={refreshScreen()}
-          // nextPage={handleLoadMore}
+          nextPage={handleLoadMore}
           refreshing={refreshing}
+          showFooter={showFooter}
         />
       )}
       {/* {!isProductLoading && data.length === 0 && (
