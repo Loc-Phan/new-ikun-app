@@ -285,12 +285,26 @@ const CourseDetails = () => {
   // Navigation methods
   const onNavigateLearning = useCallback(
     (item: any, index: number) => {
-      navigation.navigate('learning', {
-        id: item.id,
-        idCourse: id,
-      });
+      if (item?.accessibility === 'free') {
+        navigation.navigate('learning', {
+          id: item.id,
+          idCourse: id,
+        });
+        return;
+      }
+      if (purchase) {
+        navigation.navigate('learning', {
+          id: item.id,
+          idCourse: id,
+        });
+        return;
+      }
+      if (!accessToken) {
+        return notLoggedIn();
+      }
+      Alert.alert('Thông báo', 'Bạn cần mua khóa học để tiếp tục');
     },
-    [navigation, id],
+    [navigation, id, accessToken, purchase],
   );
 
   // Contact/Purchase handler
@@ -491,7 +505,7 @@ const CourseDetails = () => {
                     borderBottomColor: '#f0f2f5',
                   },
                 ]}
-                disabled={getAccessibility(item)}
+                // disabled={getAccessibility(item)}
               >
                 <View style={styles.subSectionTitle}>
                   {item?.thumbnail ? (

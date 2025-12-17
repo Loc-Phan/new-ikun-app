@@ -23,10 +23,26 @@ const ListEbook = memo(
       refreshScreen,
       contentContainerStyle,
       scrollEnabled,
-      ListEmptyComponent,
       nextPage,
       extraData,
     } = props;
+
+    const ListEmptyComponent = () => {
+      return (
+        <Text
+          style={{
+            alignSelf: 'center',
+            marginTop: 50,
+            paddingBottom: 10,
+            fontSize: 12,
+            lineHeight: 18,
+            color: '#A9A9A9',
+          }}
+        >
+          Không có dữ liệu
+        </Text>
+      );
+    };
 
     const renderItem = ({ item }: { item: any }) => {
       return <ItemEbook item={item} />;

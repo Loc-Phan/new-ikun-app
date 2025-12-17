@@ -80,7 +80,6 @@ const Login = () => {
       const result = await dispatch(login({ username, password }));
 
       if (login.fulfilled.match(result)) {
-        console.log("123")
         await dispatch(getProfile());
         if (screen) {
           if (screen === 'coursedetails' && id) {

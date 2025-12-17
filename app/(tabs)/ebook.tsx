@@ -4,13 +4,11 @@ import SkeletonCategory from '@/components/SkeletonCategory';
 import SkeletonFlatList from '@/components/SkeletonFlatList';
 import Services from '@/services';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useFocusEffect } from '@react-navigation/native';
 import { useGlobalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   BackHandler,
-  DeviceEventEmitter,
   Dimensions,
   FlatList,
   Image,
@@ -30,12 +28,10 @@ export default function EbookScreen() {
   const navigation = useNavigation();
   const { idCategory }: { idCategory: string } = useGlobalSearchParams();
 
-  const [isShowFilter, setIsShowFilter] = useState(false);
   const [page, setPage] = useState(1);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<any[]>([]);
   const inputSearchRef = useRef<TextInput>(null);
   const [showAnimatedSearch, setShowAnimatedSearch] = useState(false);
-  const [filter, setFilter] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [dataFilter, setDataFilter] = useState([]);
   const [categorySelect, setCategorySelect] = useState<string[]>([]);
@@ -44,7 +40,7 @@ export default function EbookScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showFooter, setShowFooter] = useState(false);
   const [isProductLoading, setIsProductLoading] = useState(false);
-  const [isFetchData, setIsFetchData] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // =============== Fetch categories when mount ===============
   useEffect(() => {
@@ -53,10 +49,13 @@ export default function EbookScreen() {
       const categories = await Services.getEbooksCategories();
       setDataFilter(categories.data?.data?.categories || []);
       if (idCategory) setCategorySelect([idCategory]);
+      if (page !== 1) {
+        setPage(1);
+      }
       setIsLoading(false);
     };
     fetchCategories();
-  }, [idCategory]);
+  }, [idCategory, page]);
 
   // =============== Handle Android Back button ===============
   useEffect(() => {
@@ -71,132 +70,93 @@ export default function EbookScreen() {
   }, [navigation]);
 
   // =============== Handle Device Events ===============
-  useEffect(() => {
-    const keywordListener = DeviceEventEmitter.addListener(
-      'keywordSearch',
-      value => {
-        setKeySearch(value);
-        onRefresh();
-      },
-    );
-    return () => {
-      keywordListener.remove();
-    };
-  }, [onRefresh]);
+  // useEffect(() => {
+  //   const keywordListener = DeviceEventEmitter.addListener(
+  //     'keywordSearch',
+  //     value => {
+  //       setKeySearch(value);
+  //       onRefresh();
+  //     },
+  //   );
+  //   return () => {
+  //     keywordListener.remove();
+  //   };
+  // }, [onRefresh]);
 
   // =============== Handle Category Events when focused ===============
-  useFocusEffect(
-    useCallback(() => {
-      const cateListener = DeviceEventEmitter.addListener(
-        'refresh_with_category',
-        idCate => {
-          refreshWithCate(idCate);
-        },
-      );
-      return () => {
-        cateListener.remove();
-      };
-    }, [refreshWithCate]),
-  );
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     const cateListener = DeviceEventEmitter.addListener(
+  //       'refresh_with_category',
+  //       idCate => {
+  //         refreshWithCate(idCate);
+  //       },
+  //     );
+  //     return () => {
+  //       cateListener.remove();
+  //     };
+  //   }, [refreshWithCate]),
+  // );
 
   // =============== Fetch when screen is focused ===============
-  useFocusEffect(
-    useCallback(() => {
-      if (isFetchData) {
-        getData();
-        setIsFetchData(false);
-      }
-    }, [isFetchData, getData]),
-  );
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     if (isFetchData) {
+  //       getData();
+  //       setIsFetchData(false);
+  //     }
+  //   }, [isFetchData, getData]),
+  // );
 
   // =============== Fetch Data ===============
-  const getData = useCallback(async () => {
-    try {
-      const params: any = { page };
-      // switch (filter) {
-      //   case 1:
-      //     params.sort = 'inexpensive';
-      //     break;
-      //   case 2:
-      //     params.sort = 'expensive';
-      //     break;
-      //   case 3:
-      //     params.sort = 'newest';
-      //     break;
-      //   case 4:
-      //     params.sort = 'bestsellers';
-      //     break;
-      //   case 5:
-      //     params.sort = 'best_rates';
-      //     break;
-      //   default:
-      //     params.sort = '';
-      // }
-
-      if (keySearch) {
-        if (keySearch.length < 3) {
-          Alert.alert('Từ khóa có ít nhất 3 kí tự');
-          return;
+  const getData = useCallback(
+    async (isLoadMore = false) => {
+      try {
+        if (!isLoadMore) {
+          setIsProductLoading(true);
+          setIsInitialLoading(true);
         }
-        params.title = keySearch;
-      }
+        const params: any = { page };
 
-      if (categorySelect.length > 0) {
-        params.category_id = categorySelect;
-      }
-      setIsProductLoading(true);
-      const response = await Services.getEbooks(params);
-      setIsProductLoading(false);
-      const products = response.data?.data?.products || [];
-
-      setData(prev => (page === 1 ? products : [...prev, ...products]));
-      setIsLoadMore(products.length === 10);
-      setRefreshing(false);
-    } catch (e) {
-      console.log('Fetch Ebook Error:', e);
-      setRefreshing(false);
-    }
-  }, [page, categorySelect, keySearch]);
-
-  // =============== Filter & Category ===============
-  const refreshWithCate = useCallback(async (idCate: string) => {
-    const selected = idCate ? [idCate] : [];
-    setCategorySelect(selected);
-    setRefreshing(true);
-    setData([]);
-    setPage(1);
-    setIsProductLoading(true);
-    // Gọi API với state mới ngay lập tức
-    try {
-      const params: any = { page: 1 };
-
-      if (keySearch) {
-        if (keySearch.length < 3) {
-          Alert.alert('Từ khóa có ít nhất 3 kí tự');
-          return;
+        if (keySearch) {
+          if (keySearch.length < 3) {
+            Alert.alert('Từ khóa có ít nhất 3 kí tự');
+            return;
+          }
+          params.title = keySearch;
         }
-        params.title = keySearch;
-      }
+        console.log('categorySelect', categorySelect);
+        if (categorySelect.length > 0) {
+          params.category_id = categorySelect.join(',');
+        }
+        const response = await Services.getEbooks(params);
+        const products = response.data?.data?.products || [];
 
-      if (selected.length > 0) {
-        params.categories = selected.join(',');
-      }
-
-      console.log('params refreshWithCate', params);
-
-      const responses = await Services.getEbooks(params);
-      if (responses?.data) {
-        const products = responses.data?.data?.products || [];
-        setData(products);
-        setIsLoadMore(products.length === 10);
-        setRefreshing(false);
         setIsProductLoading(false);
+        if (isLoadMore && page > 1) {
+          setData(prev => [...prev, ...products]);
+        } else {
+          setData(products);
+          setIsInitialLoading(false);
+        }
+        setIsLoadMore(products.length === 10);
+      } catch (e) {
+        console.log('Fetch Ebook Error:', e);
+        setData([]);
+        setIsInitialLoading(false);
+        setRefreshing(false);
       }
-    } catch (e) {
-      console.log('Fetch Ebook Error in refreshWithCate:', e);
-      setRefreshing(false);
+    },
+    [page, categorySelect, keySearch],
+  );
+
+  useEffect(() => {
+    if (page === 1) {
+      getData(false);
+    } else {
+      getData(true);
     }
-  }, [keySearch]);
+  }, [page, categorySelect]);
 
   const handleSelectCate = async (item: any) => {
     const selected = categorySelect?.includes(item.id)
@@ -204,68 +164,24 @@ export default function EbookScreen() {
       : [...(categorySelect || []), item.id];
 
     setCategorySelect(selected);
-    setData([]);
     setPage(1);
-    setRefreshing(true);
-
-    // Gọi API với state mới ngay lập tức thay vì chờ state update
-    try {
-      const params: any = { page: 1 };
-
-      if (keySearch) {
-        if (keySearch.length < 3) {
-          Alert.alert('Từ khóa có ít nhất 3 kí tự');
-          return;
-        }
-        params.title = keySearch;
-      }
-
-      if (selected.length > 0) {
-        params.category_id = selected;
-      }
-      setIsProductLoading(true);
-      const response = await Services.getEbooks(params);
-      setIsProductLoading(false);
-      const products = response.data?.data?.products || [];
-
-      setData(products);
-      setIsLoadMore(products.length === 10);
-      setRefreshing(false);
-    } catch (e) {
-      console.log('Fetch Ebook Error in handleSelectCate:', e);
-      setIsProductLoading(false);
-      setRefreshing(false);
-    }
+    setIsLoadMore(true); // Reset load more state
+    setIsInitialLoading(true);
   };
 
   const handleLoadMore = async () => {
-    if (!isLoadMore) return;
+    if (!isLoadMore || isProductLoading) return;
     setShowFooter(true);
     setPage(prev => prev + 1);
-    await getData();
-    setShowFooter(false);
   };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setPage(1);
     setData([]);
+    setIsInitialLoading(true); // Show loading cho refresh
     await getData();
-    setRefreshing(false);
   }, [getData]);
-
-  const handleFilter = async (value: number) => {
-    setIsShowFilter(false);
-    setFilter(value);
-    setData([]);
-    onRefresh();
-  };
-
-  const onCloseKeywordSearch = async () => {
-    setData([]);
-    setKeySearch(undefined);
-    onRefresh();
-  };
 
   const onAnimatedSearch = () => {
     setShowAnimatedSearch(true);
@@ -379,7 +295,6 @@ export default function EbookScreen() {
             alignItems: 'center',
           }}
         >
-
           {/* <TouchableOpacity
             onPress={() => setIsShowFilter(!isShowFilter)}
             style={styles.viewFilter}
@@ -416,7 +331,7 @@ export default function EbookScreen() {
           </Text>
         )}
         {isLoading && <SkeletonCategory />}
-        {isProductLoading ? (
+        {isInitialLoading ? (
           <SkeletonFlatList layout="column" items={5} />
         ) : (
           <ListEbook

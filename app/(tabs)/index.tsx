@@ -4,6 +4,7 @@ import PopularCourses from '@/components/PopularCourses';
 import PopularEbook from '@/components/PopularEbook';
 import RenderDataHTML from '@/components/RenderDataHTML';
 import Review from '@/components/Review';
+import ReviewEbook from '@/components/ReviewEbook';
 import SkeletonCategory from '@/components/SkeletonCategory';
 import SkeletonFlatList from '@/components/SkeletonFlatList';
 import { WEB_URL } from '@/constants';
@@ -25,13 +26,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const user = useSelector((state: RootState) => state.auth.user);
   const accessToken = useSelector((state: RootState) => state.auth.accessToken);
-  const dispatch = useDispatch();
   const [advertising, setAdvertising] = useState<any>([]);
   const [topCourseWithStudent, setTopCourseWithStudent] = useState<any>([]);
   const [dataNewCourse, setDataNewCourse] = useState<any>([]);
@@ -47,81 +47,152 @@ export default function HomeScreen() {
   const [loadingEbooks, setLoadingEbooks] = useState(true);
   const [loadingFeaturedEbooks, setLoadingFeaturedEbooks] = useState(true);
   const [loadingReviews, setLoadingReviews] = useState(true);
-
+  const [toeicCourses, setToeicCourses] = useState<any>([]);
+  const [ieltsCourses, setIeltsCourses] = useState<any>([]);
+  const [vstepCourses, setVstepCourses] = useState<any>([]);
+  const [communicationCourses, setCommunicationCourses] = useState<any>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [ebookReviews, setEbookReviews] = useState<any>([]);
+  const [lazyDataLoaded, setLazyDataLoaded] = useState(false);
+  const [reviewsDataLoaded, setReviewsDataLoaded] = useState(false);
 
-  const onGetData = useCallback(async () => {
-    // dispatch(logout());
+  // Helper function for safe API calls
+  const safeFetch = async (
+    fn: () => Promise<any>,
+    defaultValue: any = [],
+  ) => {
+    try {
+      const res = await fn();
+      return res?.data?.data || defaultValue;
+    } catch (error) {
+      console.log('Fetch error:', fn.name, error);
+      return defaultValue;
+    }
+  };
+
+  // Load priority data (above the fold)
+  const onGetPriorityData = useCallback(async () => {
     setLoadingAdvertising(true);
     setLoadingTopCourses(true);
     setLoadingNewCourses(true);
     setLoadingCategories(true);
-    setLoadingEbooks(true);
-    setLoadingFeaturedEbooks(true);
-    setLoadingReviews(true);
 
     try {
-      const safeFetch = async (
-        fn: () => Promise<any>,
-        defaultValue: any = [],
-      ) => {
-        try {
-          const res = await fn();
-          return res?.data?.data || defaultValue;
-        } catch (error) {
-          console.log('Fetch error:', fn.name, error);
-          return defaultValue;
-        }
-      };
-
       const [
         advertisingData,
+        cateData,
         topCourseData,
         newCourseData,
-        cateData,
-        newEbookData,
-        featuredEbookData,
-        reviewsData,
       ] = await Promise.all([
         safeFetch(Services.getAdvertising),
-        safeFetch(() => Services.topCoursesWithStudent({ limit: 4 })),
-        safeFetch(() => Services.course({ sort: 'newest', limit: 4 })),
         safeFetch(Services.getCategory),
-        safeFetch(() => Services.getEbooks({ sort: 'newest', limit: 4 })),
-        safeFetch(() => Services.getFeaturedEbooks({ limit: 4 })),
-        safeFetch(() => Services.getReviews({ limit: 5 })),
+        safeFetch(() => Services.topCoursesWithStudent({ limit: 5 })),
+        safeFetch(() => Services.course({ sort: 'newest', limit: 5 })),
       ]);
 
       setAdvertising(advertisingData?.advertising_banners || []);
       setTopCourseWithStudent(topCourseData || []);
       setDataNewCourse(newCourseData || []);
       setDataCate(cateData?.categories || []);
-      setNewEbook(newEbookData?.products || []);
-      setPopularEbook(featuredEbookData?.products || []);
-      setReviews(reviewsData?.reviews || []);
     } catch (error) {
-      console.log('Unexpected error in onGetData:', error);
+      console.log('Unexpected error in onGetPriorityData:', error);
     } finally {
       setLoadingAdvertising(false);
       setLoadingTopCourses(false);
       setLoadingNewCourses(false);
       setLoadingCategories(false);
-      setLoadingEbooks(false);
-      setLoadingFeaturedEbooks(false);
-      setLoadingReviews(false);
       setRefreshing(false);
     }
   }, []);
+
+  // Load lazy data (below the fold - triggered on scroll)
+  const onGetLazyData = useCallback(async () => {
+    if (lazyDataLoaded) return;
+
+    setLoadingEbooks(true);
+    setLoadingFeaturedEbooks(true);
+    setLazyDataLoaded(true);
+
+    try {
+      const [
+        ieltsCoursesData,
+        vstepCoursesData,
+        communicationCoursesData,
+        toeicCoursesData,
+        newEbookData,
+        featuredEbookData,
+      ] = await Promise.all([
+        safeFetch(() => Services.course({ categories: '526', limit: 5 })),
+        safeFetch(() => Services.course({ categories: '525', limit: 5 })),
+        safeFetch(() => Services.course({ categories: '524', limit: 5 })),
+        safeFetch(() => Services.course({ categories: '528', limit: 5 })),
+        safeFetch(() => Services.getEbooks({ sort: 'newest', limit: 5 })),
+        safeFetch(() => Services.getFeaturedEbooks({ limit: 5 })),
+      ]);
+
+      setNewEbook(newEbookData?.products || []);
+      setPopularEbook(featuredEbookData?.products || []);
+      setToeicCourses(toeicCoursesData || []);
+      setIeltsCourses(ieltsCoursesData || []);
+      setVstepCourses(vstepCoursesData || []);
+      setCommunicationCourses(communicationCoursesData || []);
+    } catch (error) {
+      console.log('Unexpected error in onGetLazyData:', error);
+    } finally {
+      setLoadingEbooks(false);
+      setLoadingFeaturedEbooks(false);
+    }
+  }, [lazyDataLoaded]);
+
+  // Load reviews data (lazy load level 3 - triggered when scrolling to reviews section)
+  const onGetReviewsData = useCallback(async () => {
+    if (reviewsDataLoaded) return;
+
+    setLoadingReviews(true);
+    setReviewsDataLoaded(true);
+
+    try {
+      const [
+        reviewsData,
+        ebookReviewsData,
+      ] = await Promise.all([
+        safeFetch(() => Services.getReviews({ limit: 10 })),
+        safeFetch(() => Services.getEbookReviews({ limit: 10 })),
+      ]);
+
+      setReviews(reviewsData?.reviews || []);
+      setEbookReviews(ebookReviewsData || []);
+    } catch (error) {
+      console.log('Unexpected error in onGetReviewsData:', error);
+    } finally {
+      setLoadingReviews(false);
+    }
+  }, [reviewsDataLoaded]);
+
+  // Combined data fetch for refresh
+  const onGetData = useCallback(async () => {
+    setLazyDataLoaded(false);
+    setReviewsDataLoaded(false);
+    await onGetPriorityData();
+    await onGetLazyData();
+    await onGetReviewsData();
+  }, [onGetPriorityData, onGetLazyData, onGetReviewsData]);
 
   // ⚙️ Component did mount
   useEffect(() => {
     const listener = DeviceEventEmitter.addListener(
       'refresh_overview',
-      onGetData,
+      () => {
+        setLazyDataLoaded(false);
+        setReviewsDataLoaded(false);
+        onGetPriorityData();
+        onGetLazyData();
+        onGetReviewsData();
+      },
     );
-    onGetData();
+    onGetPriorityData();
     return () => listener.remove();
-  }, [onGetData]);
+  }, [onGetPriorityData, onGetLazyData, onGetReviewsData]);
 
   // 🔁 Refresh
   const onRefresh = async () => {
@@ -289,6 +360,102 @@ export default function HomeScreen() {
           )}
           {loadingNewCourses && <SkeletonFlatList />}
 
+          {/* Lazy load trigger point */}
+          <View
+            onLayout={(event) => {
+              if (!lazyDataLoaded) {
+                onGetLazyData();
+              }
+            }}
+          >
+            {toeicCourses.length > 0 && (
+              <View style={[styles.viewList, { marginTop: 16 }]}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.titleList}>Khoá học TOEIC</Text>
+                <TouchableOpacity
+                  style={styles.seeMore}
+                  onPress={() =>
+                    navigation.navigate('courses', { idCategory: '526' })
+                  }
+                >
+                  <Text>Tất cả</Text>
+                  <MaterialIcons name="arrow-right" size={24} color="black" />
+                </TouchableOpacity>
+              </View>
+              <PopularCourses
+                data={toeicCourses}
+                horizontal
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              />
+            </View>
+          )}
+
+          {ieltsCourses.length > 0 && (
+            <View style={[styles.viewList, { marginTop: 16 }]}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.titleList}>Khoá học IELTS</Text>
+                <TouchableOpacity
+                  style={styles.seeMore}
+                  onPress={() =>
+                    navigation.navigate('courses', { idCategory: '525' })
+                  }
+                >
+                  <Text>Tất cả</Text>
+                  <MaterialIcons name="arrow-right" size={24} color="black" />
+                </TouchableOpacity>
+              </View>
+              <PopularCourses
+                data={ieltsCourses}
+                horizontal
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              />
+            </View>
+          )}
+
+          {vstepCourses.length > 0 && (
+            <View style={[styles.viewList, { marginTop: 16 }]}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.titleList}>Khoá học VSTEP</Text>
+                <TouchableOpacity
+                  style={styles.seeMore}
+                  onPress={() =>
+                    navigation.navigate('courses', { idCategory: '524' })
+                  }
+                >
+                  <Text>Tất cả</Text>
+                  <MaterialIcons name="arrow-right" size={24} color="black" />
+                </TouchableOpacity>
+              </View>
+              <PopularCourses
+                data={vstepCourses}
+                horizontal
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              />
+            </View>
+          )}
+
+          {communicationCourses.length > 0 && (
+            <View style={[styles.viewList, { marginTop: 16 }]}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.titleList}>Khoá học Giao tiếp</Text>
+                <TouchableOpacity
+                  style={styles.seeMore}
+                  onPress={() =>
+                    navigation.navigate('courses', { idCategory: '528' })
+                  }
+                >
+                  <Text>Tất cả</Text>
+                  <MaterialIcons name="arrow-right" size={24} color="black" />
+                </TouchableOpacity>
+              </View>
+              <PopularCourses
+                data={communicationCourses}
+                horizontal
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              />
+            </View>
+          )}
+
           {/* Ebooks */}
           {popularEbook.length > 0 && (
             <View style={[styles.viewList, { marginTop: 16 }]}>
@@ -331,14 +498,29 @@ export default function HomeScreen() {
             </View>
           )}
           {loadingEbooks && <SkeletonFlatList />}
+          </View>
 
-          {/* Reviews */}
-          {reviews.length > 0 && (
-            <View style={[styles.viewList, { margin: 16 }]}>
-              <Text style={styles.titleList}>Đánh giá</Text>
+          {/* Reviews - Lazy load trigger point level 3 */}
+          <View
+            onLayout={(event) => {
+              if (!reviewsDataLoaded) {
+                onGetReviewsData();
+              }
+            }}
+          >
+            {reviews.length > 0 && (
+              <View style={[styles.viewList, { margin: 16 }]}>
+              <Text style={styles.titleList}>Đánh giá khóa học</Text>
               <Review data={reviews} horizontal />
             </View>
           )}
+          {ebookReviews.length > 0 && (
+            <View style={[styles.viewList, { margin: 16 }]}>
+              <Text style={styles.titleList}>Đánh giá Ebook</Text>
+              <ReviewEbook data={ebookReviews} horizontal />
+            </View>
+          )}
+          </View>
         </ScrollView>
       </View>
     </SafeAreaView>

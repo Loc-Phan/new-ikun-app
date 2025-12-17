@@ -29,6 +29,8 @@ const deviceWidth = Dimensions.get('window').width;
 const deviceHeight = Dimensions.get('window').height;
 
 const Learning = () => {
+  console.log("deviceWidth",deviceWidth);
+  console.log("deviceHeight",deviceHeight);
   const [dataSession, setDataSession] = useState<any>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const { idCourse, id } = useLocalSearchParams<{
@@ -154,7 +156,7 @@ const Learning = () => {
           <View
             style={{
               marginTop: 50,
-              paddingHorizontal: 16,
+              // paddingHorizontal: 16,
             }}
           >
             <Text style={styles.subTitle}>{dataSession?.title}</Text>
@@ -283,6 +285,7 @@ const Learning = () => {
                       shadowOpacity: 0.1,
                       shadowRadius: 4,
                       elevation: 3,
+                      marginHorizontal: 16,
                     }}
                     onPress={() => {
                       navigation.navigate('pdf', {
@@ -412,6 +415,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 12,
+    marginHorizontal: 16,
     // backgroundColor: '#1180C3',
   },
   txtSubmit: {
@@ -429,6 +433,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontFamily: 'Inter-SemiBold',
     fontSize: 20,
+    paddingHorizontal: 16,
   },
   contentTitle: {
     marginTop: 16,
@@ -525,7 +530,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  video: { width: '100%', height: 300 },
+  video: { 
+    width: '100%', 
+    height: deviceWidth > deviceHeight 
+      ? deviceHeight * 0.7 // Landscape: 70% of screen height
+      : Math.min(deviceWidth * 0.56, deviceHeight * 0.35), // Portrait: aspect ratio based
+  },
   textFile: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
@@ -536,7 +546,9 @@ const styles = StyleSheet.create({
   },
   containerVideo: {
     width: '100%',
-    height: 250,
+    height: deviceWidth > deviceHeight 
+      ? deviceHeight * 0.65 // Landscape: slightly smaller than video
+      : Math.min(deviceWidth * 0.56, deviceHeight * 0.3), // Portrait: aspect ratio based
     backgroundColor: 'black',
   },
   fullscreenContainer: {

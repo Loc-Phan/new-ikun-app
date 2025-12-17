@@ -17,7 +17,7 @@ const LearnTodayHorizontal: React.FC<LearnTodayHorizontalProps> = ({
   const navigation = useNavigation<any>();
   const handleNavigateDetail = useCallback(() => {
     if (item?.slug === 'ebook') {
-      navigation.navigate('ebooks');
+      navigation.navigate('ebook', { idCategory: item.id });
     } else {
       navigation.navigate('courses', { idCategory: item.id });
     }

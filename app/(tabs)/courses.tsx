@@ -45,6 +45,7 @@ export default function CourseScreen() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const { idCategory }: { idCategory: string } = useGlobalSearchParams();
+  console.log('idCategory', idCategory);
 
   // --- Fetch Categories ---
   useEffect(() => {
@@ -59,7 +60,7 @@ export default function CourseScreen() {
       }
     };
     fetchCategories();
-  }, [idCategory]);
+  }, [idCategory, page]);
 
   // --- Fetch Courses ---
   const getData = useCallback(
@@ -182,7 +183,7 @@ export default function CourseScreen() {
         paddingHorizontal: 19,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: categorySelect.includes(item.id) ? '#1180C3' : '#fff',
+        backgroundColor: categorySelect.includes(String(item.id)) ? '#1180C3' : '#fff',
         borderRadius: 60,
         borderWidth: 1,
         borderColor: '#EBEBEB',
@@ -192,7 +193,7 @@ export default function CourseScreen() {
       <Text
         style={[
           styles.txtItemFilter,
-          { color: categorySelect.includes(item.id) ? '#fff' : '#858585' },
+          { color: categorySelect.includes(String(item.id)) ? '#fff' : '#858585' },
         ]}
       >
         {item.title}

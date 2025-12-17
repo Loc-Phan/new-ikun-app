@@ -1,5 +1,7 @@
 import { API_KEY, API_URL } from '@/constants';
 import axios from 'axios';
+import { router } from 'expo-router';
+import { Alert } from 'react-native';
 import { RootState, store } from '../store';
 import { logout } from '../store/auth/authSlice';
 
@@ -31,15 +33,19 @@ http.interceptors.response.use(
     const { response } = error as {
       response?: { status: number; config?: { url?: string } };
     };
-
     // Handle 401 Unauthorized errors (token expired or invalid)
     // Skip redirect for auth endpoints to prevent login loops
     const isAuthEndpoint =
-      response?.config?.url && response.config.url.includes('/auth');
+      response?.config?.url && response.config.url.includes('login');
 
     if (response && response.status === 401 && !isAuthEndpoint) {
       // Dispatch Redux logout action to clear auth state
+      const token = (store.getState() as RootState).auth?.accessToken;
+      if(token) {
       store.dispatch(logout());
+      Alert.alert('Phiên đăng nhập đã hết hiệu lực, vui lòng đăng nhập lại');
+      router.replace('/auth/login');
+    }
     }
 
     return Promise.reject(error);
