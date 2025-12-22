@@ -296,6 +296,7 @@ const CourseDetails = () => {
         navigation.navigate('learning', {
           id: item.id,
           idCourse: id,
+          requiredLogin: true,
         });
         return;
       }

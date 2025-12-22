@@ -24,18 +24,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Video from 'react-native-video';
+import { Vimeo } from 'react-native-vimeo-iframe';
 
 const deviceWidth = Dimensions.get('window').width;
 const deviceHeight = Dimensions.get('window').height;
 
 const Learning = () => {
-  console.log("deviceWidth",deviceWidth);
-  console.log("deviceHeight",deviceHeight);
   const [dataSession, setDataSession] = useState<any>(undefined);
   const [isLoading, setIsLoading] = useState(false);
-  const { idCourse, id } = useLocalSearchParams<{
+  const { idCourse, id, requiredLogin } = useLocalSearchParams<{
     idCourse: string;
     id: string;
+    requiredLogin: string;
   }>();
   const ref = useRef(null);
   const [loadingFinish, setLoadingFinish] = useState(false);
@@ -66,6 +66,14 @@ const Learning = () => {
       Alert.alert('Vui lòng thử lại');
     }
     setLoadingFinish(false);
+  };
+
+  const videoCallbacks = {
+    play: (data: any) => console.warn('play: ', data),
+    pause: (data: any) => console.warn('pause: ', data),
+    fullscreenchange: (data: any) => console.warn('fullscreenchange: ', data),
+    ended: (data: any) => console.warn('ended: ', data),
+    controlschange: (data: any) => console.warn('controlschange: ', data),
   };
 
   const handleOpenFile = (path: any) => {
@@ -131,6 +139,14 @@ const Learning = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshData]);
 
+  useEffect(() => {
+    (async () => {
+      if (requiredLogin) {
+        await Services.getUser();
+      }
+    })();
+  }, [requiredLogin]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -167,8 +183,8 @@ const Learning = () => {
               width="560"
               height="315"
               src="https://www.youtube.com/embed/${getIDfromURL(
-                dataSession?.path,
-              )}"
+                  dataSession?.path,
+                )}"
               title="YouTube video player"
               frameborder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -179,15 +195,6 @@ const Learning = () => {
             )}
             {dataSession?.storage === 'google_drive' &&
               dataSession?.file_type === 'video' && (
-                // <Video
-                // source={{ uri: 'https://drive.google.com/uc?export=download&id=1xk-0gelGy0klT5KfjoD-tEeytlUfpjB6' }}
-
-                //   style={styles.video}
-                //   controls={true}
-                //   resizeMode="contain"
-                //   useTextureView={false}
-                //   player="exo"
-                // />
                 <Video
                   ref={ref}
                   source={{
@@ -200,15 +207,6 @@ const Learning = () => {
               )}
             {dataSession?.storage === 'upload' &&
               dataSession?.file_type === 'video' && (
-                // <Video
-                // source={{ uri: 'https://drive.google.com/uc?export=download&id=1xk-0gelGy0klT5KfjoD-tEeytlUfpjB6' }}
-
-                //   style={styles.video}
-                //   controls={true}
-                //   resizeMode="contain"
-                //   useTextureView={false}
-                //   player="exo"
-                // />
                 <Video
                   ref={ref}
                   source={{ uri: `${WEB_URL}${dataSession?.path}` }}
@@ -217,6 +215,13 @@ const Learning = () => {
                   resizeMode="contain"
                 />
               )}
+            {dataSession?.storage === 'vimeo' &&
+              <Vimeo
+                videoId={dataSession?.path}
+                handlers={videoCallbacks}
+                params={'api=1&controls=1&autoplay=1&loop=1&title=0'}
+                style={styles.video}
+              />}
             {dataSession?.storage === 'upload' &&
               dataSession?.file_type === 'sound' && (
                 <View style={{ marginTop: 8 }}>
@@ -228,7 +233,7 @@ const Learning = () => {
               dataSession?.file_type !== 'sound' &&
               dataSession?.file_type !== 'pdf' &&
               dataSession?.file_type !== 'video' && (
-                <View>
+                <View style={{ paddingHorizontal: 16 }}>
                   <Text style={styles.contentTitle}>Tệp đính kèm:</Text>
                   <TouchableOpacity
                     style={{
@@ -316,7 +321,7 @@ const Learning = () => {
             {dataSession?.path &&
               dataSession?.storage !== 'google_drive' &&
               dataSession?.file_type === 'pdf' && (
-                <View>
+                <View style={{ paddingHorizontal: 16 }}>
                   <Text style={styles.contentTitle}>Tệp đính kèm:</Text>
                   <TouchableOpacity
                     style={{
@@ -530,11 +535,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  video: { 
-    width: '100%', 
-    height: deviceWidth > deviceHeight 
-      ? deviceHeight * 0.7 // Landscape: 70% of screen height
-      : Math.min(deviceWidth * 0.56, deviceHeight * 0.35), // Portrait: aspect ratio based
+  video: {
+    width: '100%',
+    height:
+      deviceWidth > deviceHeight
+        ? deviceHeight * 0.7 // Landscape: 70% of screen height
+        : Math.min(deviceWidth * 0.56, deviceHeight * 0.35), // Portrait: aspect ratio based
   },
   textFile: {
     fontFamily: 'Inter-Regular',
@@ -546,9 +552,10 @@ const styles = StyleSheet.create({
   },
   containerVideo: {
     width: '100%',
-    height: deviceWidth > deviceHeight 
-      ? deviceHeight * 0.65 // Landscape: slightly smaller than video
-      : Math.min(deviceWidth * 0.56, deviceHeight * 0.3), // Portrait: aspect ratio based
+    height:
+      deviceWidth > deviceHeight
+        ? deviceHeight * 0.65 // Landscape: slightly smaller than video
+        : Math.min(deviceWidth * 0.56, deviceHeight * 0.3), // Portrait: aspect ratio based
     backgroundColor: 'black',
   },
   fullscreenContainer: {

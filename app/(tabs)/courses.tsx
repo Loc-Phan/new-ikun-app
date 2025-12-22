@@ -45,7 +45,6 @@ export default function CourseScreen() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const { idCategory }: { idCategory: string } = useGlobalSearchParams();
-  console.log('idCategory', idCategory);
 
   // --- Fetch Categories ---
   useEffect(() => {
@@ -54,7 +53,7 @@ export default function CourseScreen() {
       const categories = await Services.getCategory();
       setIsLoading(false);
       setDataFilter(categories.data?.data?.categories || []);
-      setCategorySelect(idCategory ? [idCategory] : []);
+      setCategorySelect(idCategory ? [String(idCategory)] : []);
       if (page !== 1) {
         setPage(1);
       }
@@ -78,7 +77,6 @@ export default function CourseScreen() {
       if (categorySelect.length > 0) {
         param.categories = categorySelect.join(',');
       }
-      console.log('param', param);
       try {
         // Chỉ set isProductLoading cho initial loading
         if (!isLoadMore) {
@@ -152,9 +150,10 @@ export default function CourseScreen() {
   // };
 
   const onSelectCate = async (item: any) => {
-    const newCategorySelect = categorySelect.includes(item.id)
-      ? categorySelect.filter(x => x !== item.id)
-      : [...categorySelect, item.id];
+    const itemIdStr = String(item.id);
+    const newCategorySelect = categorySelect.includes(itemIdStr)
+      ? categorySelect.filter(x => x !== itemIdStr)
+      : [...categorySelect, itemIdStr];
 
     setCategorySelect(newCategorySelect);
     setPage(1); // Reset page về 1 khi thay đổi filter

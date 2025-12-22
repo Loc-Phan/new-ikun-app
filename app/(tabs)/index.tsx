@@ -115,17 +115,17 @@ export default function HomeScreen() {
 
     try {
       const [
-        ieltsCoursesData,
         vstepCoursesData,
-        communicationCoursesData,
         toeicCoursesData,
+        communicationCoursesData,
+        ieltsCoursesData,
         newEbookData,
         featuredEbookData,
       ] = await Promise.all([
-        safeFetch(() => Services.course({ categories: '526', limit: 5 })),
-        safeFetch(() => Services.course({ categories: '525', limit: 5 })),
         safeFetch(() => Services.course({ categories: '524', limit: 5 })),
+        safeFetch(() => Services.course({ categories: '526', limit: 5 })),
         safeFetch(() => Services.course({ categories: '528', limit: 5 })),
+        safeFetch(() => Services.course({ categories: '525', limit: 5 })),
         safeFetch(() => Services.getEbooks({ sort: 'newest', limit: 5 })),
         safeFetch(() => Services.getFeaturedEbooks({ limit: 5 })),
       ]);

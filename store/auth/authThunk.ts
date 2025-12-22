@@ -39,7 +39,6 @@ export const getProfile = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const result = await Services.getUser();
-      console.log('result', result.data?.data);
       if (result.data.success) {
         return result.data?.data?.user;
       }
