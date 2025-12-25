@@ -64,7 +64,7 @@ export default function CourseScreen() {
   // --- Fetch Courses ---
   const getData = useCallback(
     async (isLoadMore = false) => {
-      const param: any = { page };
+      const param: any = { page, limit: 100 };
 
       if (keySearch) {
         if (keySearch.length < 3) {
@@ -119,11 +119,11 @@ export default function CourseScreen() {
   }, [page, categorySelect]);
 
   // --- Load More ---
-  const handleLoadMore = async () => {
-    if (!isLoadMore || isProductLoading) return;
-    setShowFooter(true);
-    setPage(prev => prev + 1);
-  };
+  // const handleLoadMore = async () => {
+  //   if (!isLoadMore || isProductLoading) return;
+  //   setShowFooter(true);
+  //   setPage(prev => prev + 1);
+  // };
 
   // Ẩn footer khi load xong
   useEffect(() => {
@@ -312,7 +312,7 @@ export default function CourseScreen() {
           style={{ marginTop: 20 }}
           contentContainerStyle={{ paddingBottom: 80 }}
           refreshScreen={refreshScreen()}
-          nextPage={handleLoadMore}
+          // nextPage={handleLoadMore}
           refreshing={refreshing}
           showFooter={showFooter}
         />
