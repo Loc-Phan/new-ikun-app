@@ -5,9 +5,11 @@ import { WEB_URL } from '@/constants';
 import Services from '@/services';
 import { detectNameFromURL, getIDfromURL } from '@/utils';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,7 +25,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Video from 'react-native-video';
 import { Vimeo } from 'react-native-vimeo-iframe';
 
 const deviceWidth = Dimensions.get('window').width;
@@ -37,15 +38,69 @@ const Learning = () => {
     id: string;
     requiredLogin: string;
   }>();
-  const ref = useRef(null);
   const [loadingFinish, setLoadingFinish] = useState(false);
   const [refreshData, setRefreshData] = useState(new Date().getTime());
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const navigation = useNavigation<any>();
-  // const course = useSelector(state => state.course);
-  const handleBackPress = () => {
+  
+  // Video players for expo-video
+  const googleDriveVideoSource = dataSession?.storage === 'google_drive' && dataSession?.file_type === 'video'
+    ? `https://drive.google.com/uc?export=download&id=${dataSession?.path}`
+    : null;
+  const uploadVideoSource = dataSession?.storage === 'upload' && dataSession?.file_type === 'video'
+    ? `${WEB_URL}${dataSession?.path}`
+    : null;
+  
+  const googleDrivePlayer = useVideoPlayer(googleDriveVideoSource || '', player => {
+    player.loop = false;
+  });
+  
+  const uploadPlayer = useVideoPlayer(uploadVideoSource || '', player => {
+    player.loop = false;
+  });
+  
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => {
+      if (prev) {
+        // Exiting fullscreen - pause the video
+        const player = dataSession?.storage === 'google_drive' ? googleDrivePlayer : uploadPlayer;
+        player.pause();
+        setIsPlaying(false);
+      }
+      return !prev;
+    });
+  }, [dataSession?.storage, googleDrivePlayer, uploadPlayer]);
+  
+  const handlePlayPause = useCallback(() => {
+    const player = dataSession?.storage === 'google_drive' ? googleDrivePlayer : uploadPlayer;
+    
+    if (player.playing) {
+      player.pause();
+      setIsPlaying(false);
+    } else {
+      player.play();
+      setIsPlaying(true);
+      setIsFullscreen(true);
+    }
+  }, [dataSession?.storage, googleDrivePlayer, uploadPlayer]);
+  
+  const handleBackPress = useCallback(() => {
+    if (isFullscreen) {
+      setIsFullscreen(false);
+      return true;
+    }
     navigation.goBack();
     return true;
-  };
+  }, [isFullscreen, navigation]);
+  
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBackPress,
+    );
+    return () => backHandler.remove();
+  }, [handleBackPress]);
 
   const goBack = () => {
     navigation.goBack();
@@ -195,25 +250,69 @@ const Learning = () => {
             )}
             {dataSession?.storage === 'google_drive' &&
               dataSession?.file_type === 'video' && (
-                <Video
-                  ref={ref}
-                  source={{
-                    uri: `https://drive.google.com/uc?export=download&id=${dataSession?.path}`,
-                  }}
-                  style={styles.video}
-                  controls={true}
-                  resizeMode="contain"
-                />
+                <View>
+                  <VideoView
+                    style={styles.video}
+                    player={googleDrivePlayer}
+                    allowsFullscreen={false}
+                    allowsPictureInPicture={false}
+                    contentFit="contain"
+                    nativeControls={false}
+                  />
+                  <TouchableOpacity
+                    style={styles.playPauseButton}
+                    onPress={handlePlayPause}
+                  >
+                    <MaterialIcons 
+                      name={isPlaying ? "pause" : "play-arrow"} 
+                      size={32} 
+                      color="#fff" 
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.fullscreenButton}
+                    onPress={toggleFullscreen}
+                  >
+                    <MaterialIcons 
+                      name={isFullscreen ? "fullscreen-exit" : "fullscreen"} 
+                      size={32} 
+                      color="#fff" 
+                    />
+                  </TouchableOpacity>
+                </View>
               )}
             {dataSession?.storage === 'upload' &&
               dataSession?.file_type === 'video' && (
-                <Video
-                  ref={ref}
-                  source={{ uri: `${WEB_URL}${dataSession?.path}` }}
-                  style={styles.video}
-                  controls={true}
-                  resizeMode="contain"
-                />
+                <View>
+                  <VideoView
+                    style={styles.video}
+                    player={uploadPlayer}
+                    allowsFullscreen={false}
+                    allowsPictureInPicture={false}
+                    contentFit="contain"
+                    nativeControls={false}
+                  />
+                  <TouchableOpacity
+                    style={styles.playPauseButton}
+                    onPress={handlePlayPause}
+                  >
+                    <MaterialIcons 
+                      name={isPlaying ? "pause" : "play-arrow"} 
+                      size={32} 
+                      color="#fff" 
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.fullscreenButton}
+                    onPress={toggleFullscreen}
+                  >
+                    <MaterialIcons 
+                      name={isFullscreen ? "fullscreen-exit" : "fullscreen"} 
+                      size={32} 
+                      color="#fff" 
+                    />
+                  </TouchableOpacity>
+                </View>
               )}
             {dataSession?.storage === 'vimeo' &&
               <Vimeo
@@ -368,6 +467,44 @@ const Learning = () => {
             </TouchableOpacity>
           </View>
         </ScrollView>
+      )}
+      
+      {/* Custom Fullscreen Modal */}
+      {isFullscreen && (
+        <View style={styles.fullscreenContainer}>
+          <TouchableOpacity
+            style={styles.fullscreenExitButton}
+            onPress={toggleFullscreen}
+          >
+            <MaterialIcons name="close" size={32} color="#fff" />
+          </TouchableOpacity>
+          
+          {dataSession?.storage === 'google_drive' && dataSession?.file_type === 'video' && (
+            <View style={styles.fullscreenVideoWrapper}>
+              <VideoView
+                style={styles.fullscreenVideo}
+                player={googleDrivePlayer}
+                allowsFullscreen={false}
+                allowsPictureInPicture={false}
+                contentFit="contain"
+                nativeControls={true}
+              />
+            </View>
+          )}
+          
+          {dataSession?.storage === 'upload' && dataSession?.file_type === 'video' && (
+            <View style={styles.fullscreenVideoWrapper}>
+              <VideoView
+                style={styles.fullscreenVideo}
+                player={uploadPlayer}
+                allowsFullscreen={false}
+                allowsPictureInPicture={false}
+                contentFit="contain"
+                nativeControls={true}
+              />
+            </View>
+          )}
+        </View>
       )}
     </SafeAreaView>
   );
@@ -564,18 +701,47 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'red',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 9999,
+  },
+  fullscreenVideoWrapper: {
+    width: '100%',
+    height: '100%',
+    paddingBottom: 60,
+    justifyContent: 'center',
   },
   fullscreenVideo: {
     width: '100%',
     height: '100%',
   },
+  playPauseButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -30 }, { translateY: -30 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 50,
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   fullscreenButton: {
     position: 'absolute',
     right: 10,
     bottom: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 4,
+  },
+  fullscreenExitButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
     padding: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 25,
+    zIndex: 10000,
   },
 });

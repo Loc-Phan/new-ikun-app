@@ -36,7 +36,7 @@ export default function CourseScreen() {
   const [showAnimatedSearch, setShowAnimatedSearch] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [dataFilter, setDataFilter] = useState<any[]>([]);
-  const [categorySelect, setCategorySelect] = useState<any[]>([]);
+  const [categorySelect, setCategorySelect] = useState<string | null>(null);
   const [keySearch, setKeySearch] = useState<any>(undefined);
   const [refreshing, setRefreshing] = useState(false);
   const [isProductLoading, setIsProductLoading] = useState(false);
@@ -53,7 +53,7 @@ export default function CourseScreen() {
       const categories = await Services.getCategory();
       setIsLoading(false);
       setDataFilter(categories.data?.data?.categories || []);
-      setCategorySelect(idCategory ? [String(idCategory)] : []);
+      setCategorySelect(idCategory ? String(idCategory) : null);
       if (page !== 1) {
         setPage(1);
       }
@@ -74,9 +74,10 @@ export default function CourseScreen() {
         param.title = keySearch;
       }
 
-      if (categorySelect.length > 0) {
-        param.categories = categorySelect.join(',');
+      if (categorySelect) {
+        param.categories = categorySelect;
       }
+      console.log('Request params:', param);
       try {
         // Chỉ set isProductLoading cho initial loading
         if (!isLoadMore) {
@@ -151,14 +152,12 @@ export default function CourseScreen() {
 
   const onSelectCate = async (item: any) => {
     const itemIdStr = String(item.id);
-    const newCategorySelect = categorySelect.includes(itemIdStr)
-      ? categorySelect.filter(x => x !== itemIdStr)
-      : [...categorySelect, itemIdStr];
+    const newCategorySelect = categorySelect === itemIdStr ? null : itemIdStr;
 
     setCategorySelect(newCategorySelect);
-    setPage(1); // Reset page về 1 khi thay đổi filter
-    setIsLoadMore(true); // Reset load more state
-    setIsInitialLoading(true); // Show loading cho filter mới
+    setPage(1);
+    setIsLoadMore(true);
+    setIsInitialLoading(true);
   };
 
   // const onCloseKeywordSearch = async () => {
@@ -182,7 +181,7 @@ export default function CourseScreen() {
         paddingHorizontal: 19,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: categorySelect.includes(String(item.id)) ? '#1180C3' : '#fff',
+        backgroundColor: categorySelect === String(item.id) ? '#1180C3' : '#fff',
         borderRadius: 60,
         borderWidth: 1,
         borderColor: '#EBEBEB',
@@ -192,7 +191,7 @@ export default function CourseScreen() {
       <Text
         style={[
           styles.txtItemFilter,
-          { color: categorySelect.includes(String(item.id)) ? '#fff' : '#858585' },
+          { color: categorySelect === String(item.id) ? '#fff' : '#858585' },
         ]}
       >
         {item.title}

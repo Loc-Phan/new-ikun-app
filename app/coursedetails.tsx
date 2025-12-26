@@ -1,18 +1,18 @@
-import { Images } from '@/assets';
-import RenderDataHTML from '@/components/RenderDataHTML';
-import { WEB_URL } from '@/constants';
-import Services from '@/services';
+import { Images } from "@/assets";
+import RenderDataHTML from "@/components/RenderDataHTML";
+import { WEB_URL } from "@/constants";
+import Services from "@/services";
 import {
   pushProductTransactionIAP,
   saveProductTransactionIAP,
-} from '@/store/productiap/productiapSlice';
-import { currencyFormat, getIDfromURL } from '@/utils';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import Fontisto from '@expo/vector-icons/Fontisto';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { last } from 'lodash';
-import moment from 'moment';
-import React, { useCallback, useEffect, useState } from 'react';
+} from "@/store/productiap/productiapSlice";
+import { currencyFormat, getIDfromURL } from "@/utils";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Fontisto from "@expo/vector-icons/Fontisto";
+import { useLocalSearchParams, useNavigation } from "expo-router";
+import { last } from "lodash";
+import moment from "moment";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -28,16 +28,16 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import Accordion from 'react-native-collapsible/Accordion';
-import * as RNIap from 'react-native-iap';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { Rating } from 'react-native-ratings';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store';
+} from "react-native";
+import Accordion from "react-native-collapsible/Accordion";
+import * as RNIap from "react-native-iap";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { Rating } from "react-native-ratings";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "../store";
 
-const deviceWidth = Dimensions.get('window').width;
+const deviceWidth = Dimensions.get("window").width;
 
 const CourseDetails = () => {
   const navigation = useNavigation<any>();
@@ -47,7 +47,7 @@ const CourseDetails = () => {
   const user = useSelector((state: RootState) => state.auth?.user);
   const productIAP = useSelector((state: RootState) => state.productIAP);
   const accessToken = useSelector(
-    (state: RootState) => state.auth?.accessToken,
+    (state: RootState) => state.auth?.accessToken
   );
 
   // State management - separated for better control
@@ -61,12 +61,12 @@ const CourseDetails = () => {
 
   // Purchase & Product States
   const [purchase, setPurchase] = useState(false);
-  const [productId, setProductId] = useState('');
-  console.log('productId', productId);
+  const [productId, setProductId] = useState("");
+  console.log("productId", productId);
   const [iosRNIapState, setIosRNIapState] = useState(true);
 
   // Review States
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState("");
   const [loadingReview, setLoadingReview] = useState(false);
   const [contentQuality, setContentQuality] = useState(5);
   const [instructorQuality, setInstructorQuality] = useState(5);
@@ -98,70 +98,55 @@ const CourseDetails = () => {
 
   const handleUpdatePurchaseBackend = useCallback(async () => {
     const { transaction } = productIAP;
-    //change state purchase to true;
-    console.log('Đã mua');
+    console.log("Đã mua");
     setPurchase(true);
 
-    // call api backend
-    await Services.iOSBuyCourse({
-      webinar_id: id,
-    })
-      .then(async res => {
-        await dispatch(
-          saveProductTransactionIAP({
-            username: user.info?.email, //change to username
-            productIds: (transaction[user.info?.email || ''] || []).filter(
-              f => f !== productId,
-            ),
-          }),
-        );
-      })
-      .catch(async () => {
-        // when save failed transaction to redux and update when open this screen again
-        await dispatch(
-          pushProductTransactionIAP({
-            username: user.info?.email, //change to username
-            productId: productId,
-          }),
-        );
-      });
-    // call api backend
-  }, [id, productIAP, productId]);
+    try {
+      await Services.iOSBuyCourse({ webinar_id: id });
+      await dispatch(
+        saveProductTransactionIAP({
+          username: user.info?.email,
+          productIds: (transaction[user.info?.email || ""] || []).filter(
+            (f) => f !== productId
+          ),
+        })
+      );
+    } catch {
+      await dispatch(
+        pushProductTransactionIAP({
+          username: user.info?.email,
+          productId: productId,
+        })
+      );
+    }
+  }, [id, productIAP, productId, user?.info?.email, dispatch]);
 
   // Tách logic xử lý purchase để tái sử dụng
-  const handlePurchaseLogic = useCallback(
-    async (transaction: any) => {
-      if (Platform.OS === 'ios') {
-        if (transaction[user?.info?.email]?.includes(productId)) {
-          await handleUpdatePurchaseBackend();
-        } else {
-          try {
-            await RNIap.initConnection();
-
-            // clear transactionIos to show purchase by username
-            await RNIap.clearTransactionIOS();
-
-            // get list products for function RNIap.requestPurchase
-            const products = await RNIap.fetchProducts({ skus: [productId] });
-            if (!products?.length) {
-              setIosRNIapState(false);
-            } else {
-              setIosRNIapState(true);
-            }
-          } catch (error: any) {
-            console.log(
-              error.message || 'Error when connection react-native-iap',
-            );
-            setIosRNIapState(false);
-          }
+  const handlePurchaseLogicRef = React.useRef<((transaction: any) => Promise<void>) | null>(null);
+  
+  handlePurchaseLogicRef.current = async (transaction: any) => {
+    if (Platform.OS === "ios" && productId) {
+      if (transaction[user?.info?.email]?.includes(productId)) {
+        await handleUpdatePurchaseBackend();
+      } else {
+        try {
+          await RNIap.initConnection();
+          await RNIap.clearTransactionIOS();
+          const products = await RNIap.fetchProducts({ skus: [productId] });
+          setIosRNIapState((products?.length ?? 0) > 0);
+        } catch (error: any) {
+          console.log(error.message || "Error when connection react-native-iap");
+          setIosRNIapState(false);
         }
       }
-    },
-    [user?.info?.email, productId],
-  );
+    }
+  };
 
   // Data fetching
   const getData = useCallback(async () => {
+    // Prevent concurrent calls
+    if (isLoading) return;
+    
     const { transaction } = productIAP;
     setIsLoading(true);
 
@@ -172,56 +157,53 @@ const CourseDetails = () => {
 
     // API 1: Course Details
     try {
-      response = (await Services.courseDetails(id)).data;
-      console.log('✅ Course details loaded successfully');
+      response = (await Services.courseDetails(id as string)).data;
+      console.log("✅ Course details loaded successfully");
     } catch (error: any) {
-      console.log('❌ Course details failed:', error.message);
+      console.log("❌ Course details failed:", error.message);
     }
 
     // API 2: Course Content
     try {
-      responseContent = (await Services.contentCourseDetails(id)).data;
-      console.log('✅ Course content loaded successfully');
+      responseContent = (await Services.contentCourseDetails(id as string)).data;
+      console.log("✅ Course content loaded successfully");
     } catch (error: any) {
-      console.log('❌ Course content failed:', error.message);
+      console.log("❌ Course content failed:", error.message);
     }
 
     // API 3: My Course (có thể bị 401 nếu chưa login)
     try {
       purchase = (await Services.myCourse()).data;
     } catch (error: any) {
-      console.log('❌ My course failed (có thể do chưa login):', error.message);
+      console.log("❌ My course failed (có thể do chưa login):", error.message);
       // Không set purchase = null vì đã khởi tạo ở trên
     }
-    console.log('response?.data', response?.data?.link);
+    console.log("response?.data", response?.data?.link);
     // Xử lý dữ liệu nếu có
     if (response?.data) {
-      setProductId(last(response?.data?.link?.split('/') || []));
+      setProductId(last(response?.data?.link?.split("/") || []) || "");
     }
 
     // Xử lý purchase status
-    if (purchase && purchase?.data?.webinars) {
-      console.log('id', id);
-      const res = purchase?.data?.webinars?.find(
-        item => String(item.id) === id,
+    if (purchase?.data?.webinars) {
+      const res = purchase.data.webinars.find(
+        (item) => String(item.id) === id
       );
-      console.log('✅ My course loaded successfully', purchase?.data?.webinars);
       if (res) {
         setPurchase(true);
       } else {
-        await handlePurchaseLogic(transaction);
+        await handlePurchaseLogicRef.current?.(transaction);
       }
     } else {
-      // Nếu không lấy được purchase data, vẫn xử lý iOS logic
-      await handlePurchaseLogic(transaction);
+      await handlePurchaseLogicRef.current?.(transaction);
     }
 
     // Merge course data và content
     if (response?.data && responseContent?.data) {
-      const newData = responseContent?.data?.map(itemContent => {
+      const newData = responseContent?.data?.map((itemContent: any) => {
         for (const item of response?.data?.files_chapters) {
           if (itemContent?.id === item?.id) {
-            const check = itemContent?.items?.filter(ite => {
+            const check = itemContent?.items?.filter((ite: any) => {
               for (const i of item?.files) {
                 if (ite?.id === i?.id) {
                   return ite;
@@ -240,7 +222,7 @@ const CourseDetails = () => {
     }
 
     setIsLoading(false);
-  }, [id, productIAP, handlePurchaseLogic]);
+  }, [id]);
 
   const refreshData = useCallback(async () => {
     setRefreshing(true);
@@ -250,28 +232,29 @@ const CourseDetails = () => {
 
   // Effects
   useEffect(() => {
-    const tab = tab ? parseInt(tab) : 0;
-    if (tab) setActiveTab(tab);
+    const tabValue = tab ? parseInt(tab) : 0;
+    if (tabValue) setActiveTab(tabValue);
     getData();
-  }, [getData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      handleBackPress,
+      "hardwareBackPress",
+      handleBackPress
     );
     const eventListener = DeviceEventEmitter.addListener(
-      'loadCourseDetail',
-      refreshData,
+      "loadCourseDetail",
+      refreshData
     );
 
     const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      keyboardDidShow,
+      "keyboardDidShow",
+      keyboardDidShow
     );
     const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
-      keyboardDidHide,
+      "keyboardDidHide",
+      keyboardDidHide
     );
 
     return () => {
@@ -285,15 +268,15 @@ const CourseDetails = () => {
   // Navigation methods
   const onNavigateLearning = useCallback(
     (item: any, index: number) => {
-      if (item?.accessibility === 'free') {
-        navigation.navigate('learning', {
+      if (item?.accessibility === "free") {
+        navigation.navigate("learning", {
           id: item.id,
           idCourse: id,
         });
         return;
       }
       if (purchase) {
-        navigation.navigate('learning', {
+        navigation.navigate("learning", {
           id: item.id,
           idCourse: id,
           requiredLogin: true,
@@ -303,9 +286,9 @@ const CourseDetails = () => {
       if (!accessToken) {
         return notLoggedIn();
       }
-      Alert.alert('Thông báo', 'Bạn cần mua khóa học để tiếp tục');
+      Alert.alert("Thông báo", "Bạn cần mua khóa học để tiếp tục");
     },
-    [navigation, id, accessToken, purchase],
+    [navigation, id, accessToken, purchase]
   );
 
   // Contact/Purchase handler
@@ -315,16 +298,16 @@ const CourseDetails = () => {
         return notLoggedIn();
       }
 
-      if (Platform.OS === 'android') {
-        navigation.navigate('assistant', {
+      if (Platform.OS === "android") {
+        navigation.navigate("assistant", {
           id: courseId,
           name: course?.title,
-          type: 'course',
+          type: "course",
         });
       } else {
         try {
           if (!productId) {
-            Alert.alert('Lỗi', 'Mã sản phẩm không hợp lệ');
+            Alert.alert("Lỗi", "Mã sản phẩm không hợp lệ");
             return;
           }
           setLoadingPurchase(true);
@@ -334,43 +317,43 @@ const CourseDetails = () => {
                 sku: productId,
               },
             },
-            type: 'in-app',
+            type: "in-app",
           })
-            .then(async res => {
+            .then(async (res) => {
               // console.log("res",res)
               // call api to backend update purchase todo
               // await handleUpdatePurchaseBackend();
               // call api to backend update purchase todo
             })
-            .catch(err => {
+            .catch((err) => {
               console.log(err);
-              Alert.alert('Lỗi', 'Đã xảy ra lỗi khi mua khóa học');
+              Alert.alert("Lỗi", "Đã xảy ra lỗi khi mua khóa học");
             })
             .finally(() => {
               setLoadingPurchase(false);
             });
         } catch (error) {
-          Alert.alert('Lỗi', 'Đã xảy ra lỗi khi mua khóa học');
+          Alert.alert("Lỗi", "Đã xảy ra lỗi khi mua khóa học");
           setLoadingPurchase(false);
         }
       }
     },
-    [accessToken, course, productId],
+    [accessToken, course, productId]
   );
 
   // Login prompt
   const notLoggedIn = useCallback(() => {
-    return Alert.alert('Chưa đăng nhập', 'Bạn cần đăng nhập để tiếp tục', [
+    return Alert.alert("Chưa đăng nhập", "Bạn cần đăng nhập để tiếp tục", [
       {
-        text: 'Hủy',
+        text: "Hủy",
         onPress: () => {},
-        style: 'cancel',
+        style: "cancel",
       },
       {
-        text: 'Đăng nhập',
+        text: "Đăng nhập",
         onPress: () =>
-          navigation.navigate('auth/login', {
-            screen: 'CourseDetailsScreen',
+          navigation.navigate("auth/login", {
+            screen: "CourseDetailsScreen",
             id: id,
           }),
       },
@@ -380,13 +363,13 @@ const CourseDetails = () => {
   // Review submission
   const handleLeaveReview = useCallback(async () => {
     if (!description) {
-      Alert.alert('Vui lòng nhập mô tả đánh giá');
+      Alert.alert("Vui lòng nhập mô tả đánh giá");
       return;
     }
 
     const params = {
       id: id,
-      item: 'webinar',
+      item: "webinar",
       content_quality: contentQuality,
       purchase_worth: purchaseQuality,
       instructor_skills: instructorQuality,
@@ -399,13 +382,13 @@ const CourseDetails = () => {
     try {
       const response = await Services.leaveCourseReview(params);
       if (response?.data) {
-        Alert.alert('Đánh giá thành công!');
-        setDescription('');
+        Alert.alert("Đánh giá thành công!");
+        setDescription("");
       } else {
-        Alert.alert('Đánh giá thất bại');
+        Alert.alert("Đánh giá thất bại");
       }
     } catch (error) {
-      Alert.alert('Đánh giá thất bại');
+      Alert.alert("Đánh giá thất bại");
     } finally {
       setLoadingReview(false);
     }
@@ -432,37 +415,37 @@ const CourseDetails = () => {
           <View key={item.id} style={styles.reviewWrapper}>
             <View
               style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
+                flexDirection: "row",
+                justifyContent: "space-between",
                 gap: 32,
               }}
             >
               <View
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  width: '50%',
+                  flexDirection: "row",
+                  alignItems: "center",
+                  width: "50%",
                 }}
               >
                 <Image
                   source={{
                     uri:
                       item?.user?.avatar ||
-                      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMjCj43UJiVu-3Qp9b5yj-SwLGR-kndCzqLaiMv5SMkITd4CcbQQ7vX_CEZd-xxqka8ZM&usqp=CAU',
+                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMjCj43UJiVu-3Qp9b5yj-SwLGR-kndCzqLaiMv5SMkITd4CcbQQ7vX_CEZd-xxqka8ZM&usqp=CAU",
                   }}
                   style={styles.avatar}
                 />
                 <View
                   style={{
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
+                    flexDirection: "column",
+                    alignItems: "flex-start",
                     marginLeft: 8,
                     gap: 4,
                   }}
                 >
                   <Text>{item?.user?.full_name}</Text>
                   <Text>
-                    {moment(item.created_at * 1000).format('HH:mm DD/MM/YYYY')}
+                    {moment(item.created_at * 1000).format("HH:mm DD/MM/YYYY")}
                   </Text>
                   <Rating
                     ratingCount={5}
@@ -483,15 +466,15 @@ const CourseDetails = () => {
 
   const renderContent = (section, index) => {
     const { items } = section;
-    const getAccessibility = item => {
-      if (item?.accessibility === 'free') return false;
+    const getAccessibility = (item) => {
+      if (item?.accessibility === "free") return false;
       if (purchase) return false;
       return true;
     };
     return (
       <View>
         {items?.map((item, i) => {
-          if (item?.type === 'text_lesson' || item?.type === 'file')
+          if (item?.type === "text_lesson" || item?.type === "file")
             return (
               <TouchableOpacity
                 key={String(i)}
@@ -503,7 +486,7 @@ const CourseDetails = () => {
                     paddingBottom: 8,
                     // marginLeft: 24,
                     borderBottomWidth: 1,
-                    borderBottomColor: '#f0f2f5',
+                    borderBottomColor: "#f0f2f5",
                   },
                 ]}
                 // disabled={getAccessibility(item)}
@@ -524,7 +507,7 @@ const CourseDetails = () => {
                   </Text>
                 </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
                   {getAccessibility(item) ? (
                     <Fontisto name="locked" size={16} color="#444" />
                   ) : null}
@@ -545,7 +528,7 @@ const CourseDetails = () => {
         >
           <View style={styles.subSectionTitle}>
             <FontAwesome
-              name={isActive ? 'caret-up' : 'caret-down'}
+              name={isActive ? "caret-up" : "caret-down"}
               size={15}
             />
             <Text numberOfLines={1} style={styles.txtSubSection}>
@@ -560,32 +543,32 @@ const CourseDetails = () => {
 
   useEffect(() => {
     const purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
-      async purchase => {
-        console.log('purchase updated:', purchase);
+      async (purchase) => {
+        console.log("purchase updated:", purchase);
 
         if (purchase.transactionId) {
           await handleUpdatePurchaseBackend();
 
-          if (Platform.OS === 'ios') {
-            await RNIap.finishTransaction(purchase, false);
+          if (Platform.OS === "ios") {
+            await RNIap.finishTransaction({ purchase, isConsumable: false });
           }
         }
-      },
+      }
     );
 
-    const purchaseErrorSubscription = RNIap.purchaseErrorListener(error => {
-      console.log('purchase error:', error);
-      Alert.alert('Lỗi', 'Thanh toán thất bại hoặc bị hủy');
+    const purchaseErrorSubscription = RNIap.purchaseErrorListener((error) => {
+      console.log("purchase error:", error);
+      Alert.alert("Lỗi", "Thanh toán thất bại hoặc bị hủy");
     });
 
     return () => {
       purchaseUpdateSubscription.remove();
       purchaseErrorSubscription.remove();
     };
-  }, []);
+  }, [handleUpdatePurchaseBackend]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <View style={styles.header1}>
           <TouchableOpacity
@@ -599,47 +582,45 @@ const CourseDetails = () => {
         </View>
       </View>
 
-      <KeyboardAwareScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 150 }}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refreshData} />
-        }
-      >
-        {course?.image && (
-          <Image style={styles.imageBanner} source={{ uri: course.image }} />
-        )}
-
-        {isLoading ? (
-          <View style={{ marginTop: 20 }}>
-            <ActivityIndicator size="small" />
-          </View>
-        ) : (
+      {isLoading ? (
+        <View style={{ marginTop: 20 }}>
+          <ActivityIndicator size="small" />
+        </View>
+      ) : (
+        <KeyboardAwareScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 150 }}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={refreshData} />
+          }
+        >
+          {course?.image && (
+            <Image style={styles.imageBanner} source={{ uri: course.image }} />
+          )}
           <View style={styles.content2}>
             <View style={styles.infoWrapper}>
               <Text style={styles.infoCate}>{course?.category}</Text>
               <Text style={styles.infoTitle}>{course?.title}</Text>
-
               <View
                 style={{
                   marginTop: 8,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <Image source={Images.iconClock} style={styles.icon} />
                   <Text style={styles.txt3}>
                     {course?.access_days
                       ? `${course.access_days} ngày`
-                      : 'Không giới hạn'}
+                      : "Không giới hạn"}
                   </Text>
                 </View>
                 {course?.students_count > 0 && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <Text style={styles.txt3}>
                       Số học viên: {course.students_count}
                     </Text>
@@ -649,7 +630,7 @@ const CourseDetails = () => {
 
               <View style={{ marginTop: 16 }}>
                 <View
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
                 >
                   {course?.best_ticket_price ? (
                     <Text
@@ -670,8 +651,8 @@ const CourseDetails = () => {
                       style={[
                         styles.salePrice,
                         {
-                          textDecorationLine: 'line-through',
-                          color: '#314753',
+                          textDecorationLine: "line-through",
+                          color: "#314753",
                         },
                       ]}
                     >
@@ -680,7 +661,7 @@ const CourseDetails = () => {
                   )}
                 </View>
                 {course?.discount_percent && course.discount_percent !== 0 && (
-                  <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                  <View style={{ flexDirection: "row", marginTop: 8 }}>
                     <Text style={styles.discount}>
                       {`Giảm ${course.discount_percent}% so với giá gốc`}
                     </Text>
@@ -691,7 +672,7 @@ const CourseDetails = () => {
 
             {/* Tab Navigation */}
             <View style={{ marginTop: 32, marginBottom: 8 }}>
-              <View style={{ flexDirection: 'row', gap: 16 }}>
+              <View style={{ flexDirection: "row", gap: 16 }}>
                 <TouchableOpacity
                   style={activeTab === 0 && styles.activeTab}
                   onPress={() => setActiveTab(0)}
@@ -719,7 +700,7 @@ const CourseDetails = () => {
                   <RenderDataHTML html={course?.description} />
                 ) : null}
                 {course?.video_demo &&
-                  course?.video_demo_source === 'youtube' && (
+                  course?.video_demo_source === "youtube" && (
                     <View style={{ marginTop: 16 }}>
                       <Text style={[styles.txtTitle, { marginBottom: 8 }]}>
                         Demo khóa học
@@ -730,7 +711,7 @@ const CourseDetails = () => {
                           width="560"
                           height="315"
                           src="https://www.youtube.com/embed/${getIDfromURL(
-                            course?.video_demo,
+                            course?.video_demo
                           )}"
                           title="YouTube video player"
                           frameborder="0"
@@ -753,12 +734,12 @@ const CourseDetails = () => {
                     activeSections={activeSections}
                     renderHeader={renderHeaderSession}
                     renderContent={renderContent}
-                    onChange={value => {
+                    onChange={(value) => {
                       setActiveSections(value);
                     }}
                   />
                 ) : (
-                  <Text style={{ fontFamily: 'Inter-Regular' }}>
+                  <Text style={{ fontFamily: "Inter-Regular" }}>
                     Không có chương trình giảng dạy
                   </Text>
                 )}
@@ -788,17 +769,17 @@ const CourseDetails = () => {
                     <View
                       style={{
                         marginTop: 16,
-                        flexDirection: 'row',
-                        alignItems: 'center',
+                        flexDirection: "row",
+                        alignItems: "center",
                         gap: 8,
                       }}
                     >
                       <Text style={styles.reviewTitle}>Đánh giá</Text>
                       <View
                         style={{
-                          width: '100%',
+                          width: "100%",
                           height: 2,
-                          backgroundColor: '#f1f1f1',
+                          backgroundColor: "#f1f1f1",
                         }}
                       />
                     </View>
@@ -810,7 +791,7 @@ const CourseDetails = () => {
                       textAlignVertical="top"
                       placeholder="Nhập mô tả"
                       value={description}
-                      onChangeText={value => setDescription(value)}
+                      onChangeText={(value) => setDescription(value)}
                     />
 
                     <TouchableOpacity
@@ -828,17 +809,17 @@ const CourseDetails = () => {
               </View>
             )}
           </View>
-        )}
-      </KeyboardAwareScrollView>
+        </KeyboardAwareScrollView>
+      )}
 
       {/* Bottom Purchase Button */}
       {!hiddenBottom && !purchase && course?.price && (
         <View style={styles.bottom}>
-          <View style={{ flexDirection: 'column', gap: 8, width: '50%' }}>
+          <View style={{ flexDirection: "column", gap: 8, width: "50%" }}>
             <Text style={styles.priceBottom}>
               {course?.best_ticket_price
                 ? currencyFormat(course.best_ticket_price)
-                : 'Miễn phí'}
+                : "Miễn phí"}
             </Text>
             {course?.discount_percent && course.discount_percent !== 0 && (
               <Text style={styles.discount}>{course.discount_percent}%</Text>
@@ -853,7 +834,7 @@ const CourseDetails = () => {
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <Text style={styles.txtAddToCart}>
-                {Platform.OS === 'android' ? 'Liên hệ ngay' : 'Mua khóa học'}
+                {Platform.OS === "android" ? "Liên hệ ngay" : "Mua khóa học"}
               </Text>
             )}
           </TouchableOpacity>
@@ -865,7 +846,7 @@ const CourseDetails = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     flex: 1,
     zIndex: 1,
   },
@@ -873,19 +854,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   header1: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   iconBack: {
     height: 14,
     width: 14,
-    resizeMode: 'contain',
-    tintColor: '#000',
+    resizeMode: "contain",
+    tintColor: "#000",
   },
   title: {
-    fontFamily: 'Inter-Medium',
-    fontWeight: '500',
+    fontFamily: "Inter-Medium",
+    fontWeight: "500",
     fontSize: 24,
     lineHeight: 36,
   },
@@ -893,65 +874,65 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   imageBanner: {
-    width: '100%',
+    width: "100%",
     height: (250 / 375) * deviceWidth,
-    resizeMode: 'contain',
+    resizeMode: "contain",
     borderRadius: 16,
   },
   content2: {},
   infoWrapper: {
-    backgroundColor: '#ebf7ff',
+    backgroundColor: "#ebf7ff",
     borderRadius: 12,
     padding: 16,
   },
   icon: {
     width: 18,
     height: 18,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   txt3: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
     fontSize: 14,
-    color: '#0B2337',
+    color: "#0B2337",
     marginLeft: 4,
   },
   price: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: "Inter-SemiBold",
     fontSize: 20,
-    color: '#25C2E8',
+    color: "#25C2E8",
   },
   priceBottom: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: "Inter-SemiBold",
     fontSize: 20,
-    color: '#ffffff',
+    color: "#ffffff",
   },
   infoTitle: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: "Inter-SemiBold",
     fontSize: 20,
-    color: '#0B2337',
-    fontWeight: '500',
+    color: "#0B2337",
+    fontWeight: "500",
   },
   infoCate: {
     marginTop: 8,
     fontSize: 13,
-    color: '#0B2337',
+    color: "#0B2337",
   },
   salePrice: {
     fontSize: 20,
-    color: '#25C2E8',
+    color: "#25C2E8",
   },
   discount: {
     fontSize: 14,
-    color: '#F11616',
+    color: "#F11616",
   },
   tab: {
     fontSize: 16,
-    color: '#0B2337',
+    color: "#0B2337",
     paddingHorizontal: 8,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   activeTab: {
-    borderBottomColor: '#1180C3',
+    borderBottomColor: "#1180C3",
     borderBottomWidth: 2,
     borderRadius: 2,
     paddingBottom: 4,
@@ -959,168 +940,168 @@ const styles = StyleSheet.create({
   description: {
     marginTop: 8,
     fontSize: 14,
-    color: '#314753',
+    color: "#314753",
   },
   reviewWrapper: {
     marginBottom: 8,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ececec',
+    borderColor: "#ececec",
   },
   avatar: {
     width: 40,
     height: 40,
-    resizeMode: 'cover',
+    resizeMode: "cover",
     borderRadius: 20,
   },
   reviewTitle: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: "Inter-Medium",
     fontSize: 16,
-    color: '#0B2337',
+    color: "#0B2337",
   },
   reviewInput: {
     marginTop: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#F3F3F3',
+    borderColor: "#F3F3F3",
     paddingVertical: 4,
     paddingHorizontal: 8,
     minHeight: 80,
-    fontFamily: 'Inter-Regular',
-    color: '#000',
+    fontFamily: "Inter-Regular",
+    color: "#000",
   },
   btnReview: {
     marginTop: 16,
     marginBottom: 16,
     width: 120,
     height: 42,
-    backgroundColor: '#1180C3',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#1180C3",
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 12,
   },
   txtReview: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
     fontSize: 16,
-    color: '#fff',
+    color: "#fff",
   },
   bottom: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     paddingBottom: 30,
     paddingTop: 10,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    backgroundColor: '#10131C',
-    alignItems: 'center',
+    flexDirection: "row",
+    backgroundColor: "#10131C",
+    alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: '#f7f7f7',
+    borderTopColor: "#f7f7f7",
   },
   btnAddToCart: {
-    backgroundColor: '#1180C3',
+    backgroundColor: "#1180C3",
     marginLeft: 10,
     flex: 1,
     paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 8,
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   txtAddToCart: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: "Inter-Medium",
     fontSize: 16,
     lineHeight: 21,
-    color: '#FFFFFF',
-    fontWeight: '500',
+    color: "#FFFFFF",
+    fontWeight: "500",
   },
   txtTitle: {
     fontSize: 18,
     lineHeight: 27,
-    color: '#000',
-    fontWeight: '500',
+    color: "#000",
+    fontWeight: "500",
     marginTop: 17,
   },
   subSectionTitle: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   imageThumbnail: {
     width: 100,
     height: 80,
-    resizeMode: 'contain',
+    resizeMode: "contain",
     borderRadius: 16,
   },
   noImageThumbnail: {
     width: 100,
     height: 80,
-    backgroundColor: '#f5f6f7',
+    backgroundColor: "#f5f6f7",
     borderRadius: 16,
   },
   txtItemLession: {
     flex: 1,
     fontSize: 16,
     lineHeight: 20,
-    color: '#4E4E4E',
-    fontWeight: '400',
+    color: "#4E4E4E",
+    fontWeight: "400",
     marginLeft: 10,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   iconPreview: {
     fontSize: 16,
-    color: '#bbbdbf',
+    color: "#bbbdbf",
     marginLeft: 5,
   },
   txtSubSection: {
     fontSize: 16,
     lineHeight: 22,
-    color: '#000',
-    fontWeight: '500',
+    color: "#000",
+    fontWeight: "500",
     marginLeft: 10,
-    justifyContent: 'flex-start',
+    justifyContent: "flex-start",
     flex: 1,
   },
   txtLength: {
     fontSize: 16,
     lineHeight: 22,
-    color: '#000',
-    fontWeight: '500',
+    color: "#000",
+    fontWeight: "500",
     marginLeft: 10,
   },
   viewReview: {
-    alignSelf: 'center',
-    justifyContent: 'center',
-    alignItems: 'center',
+    alignSelf: "center",
+    justifyContent: "center",
+    alignItems: "center",
   },
   txtRating: {
     fontSize: 36,
     lineHeight: 54,
-    color: '#FBC815',
-    fontWeight: '500',
-    textAlign: 'center',
+    color: "#FBC815",
+    fontWeight: "500",
+    textAlign: "center",
   },
   txtOverview: {
     marginTop: 13,
-    fontFamily: 'Inter-ExtraLight',
+    fontFamily: "Inter-ExtraLight",
     fontSize: 13,
     lineHeight: 20,
-    color: '#000',
-    fontWeight: '300',
+    color: "#000",
+    fontWeight: "300",
   },
   txtNameRating: {
     flex: 1,
     fontSize: 12,
     lineHeight: 16,
-    color: '#777',
+    color: "#777",
     marginTop: 0,
   },
   titleRating: {
     fontSize: 12,
     lineHeight: 20,
-    color: '#000000',
-    fontWeight: '500',
+    color: "#000000",
+    fontWeight: "500",
   },
 });
 

@@ -34,7 +34,7 @@ export default function EbookScreen() {
   const [showAnimatedSearch, setShowAnimatedSearch] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [dataFilter, setDataFilter] = useState([]);
-  const [categorySelect, setCategorySelect] = useState<string[]>([]);
+  const [categorySelect, setCategorySelect] = useState<string | null>(null);
   const [keySearch, setKeySearch] = useState<string | undefined>();
   const [isLoadMore, setIsLoadMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,7 +48,7 @@ export default function EbookScreen() {
       setIsLoading(true);
       const categories = await Services.getEbooksCategories();
       setDataFilter(categories.data?.data?.categories || []);
-      if (idCategory) setCategorySelect([idCategory]);
+      if (idCategory) setCategorySelect(idCategory);
       if (page !== 1) {
         setPage(1);
       }
@@ -126,8 +126,8 @@ export default function EbookScreen() {
           params.title = keySearch;
         }
         console.log('categorySelect', categorySelect);
-        if (categorySelect.length > 0) {
-          params.category_id = categorySelect.join(',');
+        if (categorySelect) {
+          params.category_id = categorySelect;
         }
         const response = await Services.getEbooks(params);
         const products = response.data?.data?.products || [];
@@ -159,13 +159,12 @@ export default function EbookScreen() {
   }, [page, categorySelect]);
 
   const handleSelectCate = async (item: any) => {
-    const selected = categorySelect?.includes(item.id)
-      ? categorySelect.filter(x => x !== item.id)
-      : [...(categorySelect || []), item.id];
+    const itemIdStr = String(item.id);
+    const selected = categorySelect === itemIdStr ? null : itemIdStr;
 
     setCategorySelect(selected);
     setPage(1);
-    setIsLoadMore(true); // Reset load more state
+    setIsLoadMore(true);
     setIsInitialLoading(true);
   };
 
@@ -215,7 +214,7 @@ export default function EbookScreen() {
         paddingHorizontal: 19,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: categorySelect.includes(item.id) ? '#1180C3' : '#fff',
+        backgroundColor: categorySelect === String(item.id) ? '#1180C3' : '#fff',
         borderRadius: 60,
         borderWidth: 1,
         borderColor: '#EBEBEB',
@@ -225,7 +224,7 @@ export default function EbookScreen() {
       <Text
         style={[
           styles.txtItemFilter,
-          { color: categorySelect.includes(item.id) ? '#fff' : '#858585' },
+          { color: categorySelect === String(item.id) ? '#fff' : '#858585' },
         ]}
       >
         {item.title}
