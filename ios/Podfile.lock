@@ -79,6 +79,8 @@ PODS:
     - ExpoModulesCore
   - ExpoSystemUI (6.0.8):
     - ExpoModulesCore
+  - ExpoVideo (3.0.15):
+    - ExpoModulesCore
   - ExpoWebBrowser (15.0.8):
     - ExpoModulesCore
   - FBLazyVector (0.81.5)
@@ -102,10 +104,9 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
-  - NitroIap (14.4.35):
+  - NitroIap (14.0.0):
     - hermes-engine
     - NitroModules
-    - openiap (~> 1.2.31)
     - RCTRequired
     - RCTTypeSafety
     - React-callinvoker
@@ -127,7 +128,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - NitroModules (0.31.4):
+  - NitroModules (0.32.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -150,7 +151,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - openiap (1.2.32)
   - RCTDeprecation (0.81.5)
   - RCTRequired (0.81.5)
   - RCTTypeSafety (0.81.5):
@@ -2312,9 +2312,9 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - SDWebImage (5.21.3):
-    - SDWebImage/Core (= 5.21.3)
-  - SDWebImage/Core (5.21.3)
+  - SDWebImage (5.21.5):
+    - SDWebImage/Core (= 5.21.5)
+  - SDWebImage/Core (5.21.5)
   - SDWebImageAVIFCoder (0.11.1):
     - libavif/core (>= 0.11.0)
     - SDWebImage (~> 5.10)
@@ -2341,6 +2341,7 @@ DEPENDENCIES:
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
   - ExpoSystemUI (from `../node_modules/expo-system-ui/ios`)
+  - ExpoVideo (from `../node_modules/expo-video/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
@@ -2433,7 +2434,6 @@ SPEC REPOS:
     - libavif
     - libdav1d
     - libwebp
-    - openiap
     - SDWebImage
     - SDWebImageAVIFCoder
     - SDWebImageSVGCoder
@@ -2470,6 +2470,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-symbols/ios"
   ExpoSystemUI:
     :path: "../node_modules/expo-system-ui/ios"
+  ExpoVideo:
+    :path: "../node_modules/expo-video/ios"
   ExpoWebBrowser:
     :path: "../node_modules/expo-web-browser/ios"
   FBLazyVector:
@@ -2658,15 +2660,15 @@ SPEC CHECKSUMS:
   ExpoSplashScreen: 9d2ff8fa08f2c00336a83f93bebffed3a8312519
   ExpoSymbols: ef7b8ac77ac2d496b1bc3f0f7daf5e19c3a9933a
   ExpoSystemUI: 9441d46a8efbf9224d1b2e6b18042452ffd0ed79
+  ExpoVideo: e28c2c362c591adb82c344690d64b770d29909b3
   ExpoWebBrowser: 51218ce6ef35ea769e33409aac87fea3df4b919d
   FBLazyVector: e95a291ad2dadb88e42b06e0c5fb8262de53ec12
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
   libavif: 84bbb62fb232c3018d6f1bab79beea87e35de7b7
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
-  NitroIap: f943fd1cc2a46bc659350f973cabfdeb4eb693b4
-  NitroModules: 0aeb8961982c07131179756153600a3e9253ec3b
-  openiap: ff565cd77a07ba9e1438d2764a687515ceaa3b6d
+  NitroIap: 09c1124bdb377d82fdaf2c246bcb663f4bc40d43
+  NitroModules: 3eeda02fa77dc58a24b674283237c327d17e5050
   RCTDeprecation: 943572d4be82d480a48f4884f670135ae30bf990
   RCTRequired: 8f3cfc90cc25cf6e420ddb3e7caaaabc57df6043
   RCTTypeSafety: 16a4144ca3f959583ab019b57d5633df10b5e97c
@@ -2746,7 +2748,7 @@ SPEC CHECKSUMS:
   RNScreens: dd61bc3a3e6f6901ad833efa411917d44827cf51
   RNSound: faa271856f2cd74b6caefcbe17d28dff64efb603
   RNWorklets: 28ee7370ca8da356fcc914e3e68b97e9752196d2
-  SDWebImage: 16309af6d214ba3f77a7c6f6fdda888cb313a50a
+  SDWebImage: e9c98383c7572d713c1a0d7dd2783b10599b9838
   SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380

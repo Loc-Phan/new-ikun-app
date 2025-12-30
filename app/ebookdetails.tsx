@@ -143,7 +143,7 @@ const EbookDetails = () => {
               sku: productId,
             },
           },
-          type: 'in-app',
+          type: 'inapp',
         })
           .then(async res => {
             // call api to backend update purchase todo

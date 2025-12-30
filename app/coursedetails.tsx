@@ -317,7 +317,7 @@ const CourseDetails = () => {
                 sku: productId,
               },
             },
-            type: "in-app",
+            type: "inapp",
           })
             .then(async (res) => {
               // console.log("res",res)
