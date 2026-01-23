@@ -104,9 +104,10 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
-  - NitroIap (14.0.0):
+  - NitroIap (14.7.6):
     - hermes-engine
     - NitroModules
+    - openiap (= 1.3.13)
     - RCTRequired
     - RCTTypeSafety
     - React-callinvoker
@@ -128,7 +129,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - NitroModules (0.32.0):
+  - NitroModules (0.31.10):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -151,6 +152,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - openiap (1.3.13)
   - RCTDeprecation (0.81.5)
   - RCTRequired (0.81.5)
   - RCTTypeSafety (0.81.5):
@@ -2434,6 +2436,7 @@ SPEC REPOS:
     - libavif
     - libdav1d
     - libwebp
+    - openiap
     - SDWebImage
     - SDWebImageAVIFCoder
     - SDWebImageSVGCoder
@@ -2667,8 +2670,9 @@ SPEC CHECKSUMS:
   libavif: 84bbb62fb232c3018d6f1bab79beea87e35de7b7
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
-  NitroIap: 09c1124bdb377d82fdaf2c246bcb663f4bc40d43
-  NitroModules: 3eeda02fa77dc58a24b674283237c327d17e5050
+  NitroIap: 7f3b4b63c0ab4b337955ff7cab4c19bfc733aeae
+  NitroModules: b7b51ba7f49acf5c4c13a56f2b0037b5f7bf55a7
+  openiap: 278245c5f8e8ba7fdb2503ce2f825c67020b5863
   RCTDeprecation: 943572d4be82d480a48f4884f670135ae30bf990
   RCTRequired: 8f3cfc90cc25cf6e420ddb3e7caaaabc57df6043
   RCTTypeSafety: 16a4144ca3f959583ab019b57d5633df10b5e97c

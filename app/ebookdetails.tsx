@@ -1,13 +1,13 @@
-import { Images } from '@/assets';
-import RenderDataHTML from '@/components/RenderDataHTML';
-import { WEB_URL } from '@/constants';
-import Services from '@/services';
-import { currencyFormat } from '@/utils';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { last } from 'lodash';
-import moment from 'moment';
-import React, { useEffect, useState } from 'react';
+import { Images } from "@/assets";
+import RenderDataHTML from "@/components/RenderDataHTML";
+import { WEB_URL } from "@/constants";
+import Services from "@/services";
+import { currencyFormat } from "@/utils";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useLocalSearchParams, useNavigation } from "expo-router";
+import { last } from "lodash";
+import moment from "moment";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -24,19 +24,19 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import ReactNativeBlobUtil from 'react-native-blob-util';
-import * as RNIap from 'react-native-iap';
-import { Rating } from 'react-native-ratings';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store';
+} from "react-native";
+import ReactNativeBlobUtil from "react-native-blob-util";
+import { ErrorCode, useIAP } from "react-native-iap";
+import { Rating } from "react-native-ratings";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "../store";
 import {
   pushProductTransactionIAP,
   saveProductTransactionIAP,
-} from '../store/productiap/productiapSlice';
+} from "../store/productiap/productiapSlice";
 
-const deviceWidth = Dimensions.get('window').width;
+const deviceWidth = Dimensions.get("window").width;
 
 const EbookDetails = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -53,19 +53,75 @@ const EbookDetails = () => {
   // State
   const [isLoading, setIsLoading] = useState(true);
   const [ebookDetails, setEbookDetails] = useState<any>();
-  const [productId, setProductId] = useState('');
+  const [productId, setProductId] = useState("");
   const [activeThumbnail, setActiveThumbnail] = useState<string>();
   const [activeTab, setActiveTab] = useState(0);
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState("");
   const [productQuality, setProductQuality] = useState(5);
   const [purchaseQuality, setPurchaseQuality] = useState(5);
   const [deliveryQuality, setDeliveryQuality] = useState(5);
   const [sellerQuantity, setSellerQuantity] = useState(5);
   const [loadingReview, setLoadingReview] = useState(false);
   const [isCheck, setIsCheck] = useState(false);
-  const [iosRNIapState, setIosRNIapState] = useState(true);
-  const [file, setFile] = useState('');
-    const [loadingPurchase, setLoadingPurchase] = useState(false);
+  const [file, setFile] = useState("");
+  const [loadingPurchase, setLoadingPurchase] = useState(false);
+
+  // Initialize IAP hook
+  const { connected, fetchProducts, requestPurchase, finishTransaction } =
+    useIAP({
+      onPurchaseSuccess: async (purchase) => {
+        console.log("Purchase success:", purchase);
+
+        try {
+          await finishTransaction({ purchase, isConsumable: false });
+
+          // Update backend
+          await Services.iOSBuyCourse({ product_id: id });
+          await dispatch(
+            saveProductTransactionIAP({
+              username: user?.email,
+              productIds: (transaction[user?.email || ""] || []).filter(
+                (f) => f !== productId,
+              ),
+            }),
+          );
+
+          setIsCheck(true);
+          setLoadingPurchase(false);
+
+          Alert.alert("Thanh toán thành công", "Bạn đã mua ebook thành công!", [
+            {
+              text: "OK",
+              onPress: () => {
+                handleGetInformationEbook();
+              },
+            },
+          ]);
+        } catch (err) {
+          console.error("Error finishing transaction:", err);
+          setLoadingPurchase(false);
+
+          // Still try to push transaction to local storage
+          await dispatch(
+            pushProductTransactionIAP({
+              username: user?.email,
+              productId: productId,
+            }),
+          );
+        }
+      },
+      onPurchaseError: (error) => {
+        console.error("Purchase error:", error);
+        setLoadingPurchase(false);
+
+        if (error.code !== ErrorCode.UserCancelled) {
+          Alert.alert(
+            "Lỗi thanh toán",
+            error.message || "Đã xảy ra lỗi khi mua ebook",
+          );
+        }
+      },
+    });
 
   const handleBackPress = () => {
     navigation.goBack(null);
@@ -78,7 +134,7 @@ const EbookDetails = () => {
 
   const handleLeaveReview = async () => {
     if (!description) {
-      Alert.alert('Vui lòng nhập đánh giá');
+      Alert.alert("Vui lòng nhập đánh giá");
       return;
     }
     const params = {
@@ -92,10 +148,10 @@ const EbookDetails = () => {
     setLoadingReview(true);
     const response = (await Services.leaveEbookReview(params)).data;
     if (response.data?.success === true) {
-      Alert.alert('Đánh giá thành công');
-      setDescription('');
+      Alert.alert("Đánh giá thành công");
+      setDescription("");
     } else {
-      Alert.alert(response?.data?.message || 'Đánh giá thất bại');
+      Alert.alert(response?.data?.message || "Đánh giá thất bại");
     }
     setLoadingReview(false);
   };
@@ -127,71 +183,58 @@ const EbookDetails = () => {
       notLoggedIn();
       return;
     }
-    // navigation.navigate('assistant', { id: id, name, type: 'ebook' });
-    if (Platform.OS === 'android') {
-      navigation.navigate('assistant', { id: id, name, type: 'ebook' });
+
+    if (Platform.OS === "android") {
+      navigation.navigate("assistant", { id: id, name, type: "ebook" });
     } else {
+      if (loadingPurchase || !connected) return;
+
       try {
         if (!productId) {
-          Alert.alert('Lỗi', 'Mã sản phẩm không hợp lệ');
+          Alert.alert("Lỗi", "Mã sản phẩm không hợp lệ");
           return;
         }
+
         setLoadingPurchase(true);
-        RNIap.requestPurchase({
+        await requestPurchase({
           request: {
-            ios: {
-              sku: productId,
-            },
+            ios: { sku: productId },
           },
-          type: 'inapp',
-        })
-          .then(async res => {
-            // call api to backend update purchase todo
-            // await handleUpdatePurchaseBackend();
-            // call api to backend update purchase todo
-          })
-          .catch(err => {
-            console.log(err);
-          })
-          .finally(async () => {
-            setLoadingPurchase(false);
-          });
-      } catch (error) {
-        Alert.alert('Có lỗi xảy ra trong quá trình mua, vui lòng thử lại');
+          type: "in-app",
+        });
+      } catch (err: any) {
+        console.error("Error requesting purchase:", err);
+        setLoadingPurchase(false);
+
+        if (err.code !== ErrorCode.UserCancelled) {
+          Alert.alert("Lỗi", "Đã xảy ra lỗi khi mua ebook");
+        }
       }
     }
   };
 
   const handleUpdatePurchaseBackend = async () => {
-    //change state purchase to true;
     setIsCheck(true);
 
-    // call api backend
-    await Services.iOSBuyCourse({
-      product_id: id,
-    })
-      .then(async () => {
-        handleGetInformationEbook();
-        await dispatch(
-          saveProductTransactionIAP({
-            username: user?.email, //change to username
-            productIds: (transaction[user?.email || ''] || []).filter(
-              f => f !== productId,
-            ),
-          }),
-        );
-      })
-      .catch(async () => {
-        //when save failed transaction to redux and update when open this screen again
-        await dispatch(
-          pushProductTransactionIAP({
-            username: user?.email, //change to username
-            productId: productId,
-          }),
-        );
-        setIosRNIapState(false);
-      });
-    // call api backend
+    try {
+      await Services.iOSBuyCourse({ product_id: id });
+      handleGetInformationEbook();
+      await dispatch(
+        saveProductTransactionIAP({
+          username: user?.email,
+          productIds: (transaction[user?.email || ""] || []).filter(
+            (f) => f !== productId,
+          ),
+        }),
+      );
+    } catch (error) {
+      await dispatch(
+        pushProductTransactionIAP({
+          username: user?.email,
+          productId: productId,
+        }),
+      );
+    }
   };
 
   const handleDownFile = async () => {
@@ -200,34 +243,34 @@ const EbookDetails = () => {
       downloadable = ebookDetails?.files[0]?.downloadable;
     }
     if (file && downloadable) {
-      if (Platform.OS === 'android') {
-        Linking.canOpenURL(`${WEB_URL}${file}`).then(supported => {
+      if (Platform.OS === "android") {
+        Linking.canOpenURL(`${WEB_URL}${file}`).then((supported) => {
           Linking.openURL(`${WEB_URL}${file}`);
         });
       } else {
         const { dirs } = ReactNativeBlobUtil.fs;
         const downloadDir = dirs.DocumentDir;
-        const filePath = `${downloadDir}/${ebookDetails?.title || ''}.pdf`;
+        const filePath = `${downloadDir}/${ebookDetails?.title || ""}.pdf`;
         ReactNativeBlobUtil.config({
           // add this option that makes response data to be stored as a file,
           // this is much more performant.
           fileCache: true,
           path: filePath,
         })
-          .fetch('GET', encodeURI(`${WEB_URL}${file}`), {
+          .fetch("GET", encodeURI(`${WEB_URL}${file}`), {
             //some headers ..
           })
-          .then(async res => {
+          .then(async (res) => {
             // the temp file path
-            console.log('The file saved to ', res.path());
+            console.log("The file saved to ", res.path());
             ReactNativeBlobUtil.ios.openDocument(filePath);
           })
-          .catch(async e => {
-            Alert.alert('Có lỗi xảy ra trong quá trình tải, vui lòng thử lại');
+          .catch(async (e) => {
+            Alert.alert("Có lỗi xảy ra trong quá trình tải, vui lòng thử lại");
           });
       }
     } else {
-      Alert.alert('Bạn không thể tải ebook này');
+      Alert.alert("Bạn không thể tải ebook này");
     }
   };
 
@@ -237,7 +280,7 @@ const EbookDetails = () => {
       downloadable = ebookDetails?.files[0]?.downloadable;
     }
     if (!file) {
-      Alert.alert('Bạn không thể chia sẻ ebook này');
+      Alert.alert("Bạn không thể chia sẻ ebook này");
       return;
     }
     if (file && downloadable) {
@@ -258,20 +301,20 @@ const EbookDetails = () => {
         Alert.alert(error.message);
       }
     } else {
-      Alert.alert('Bạn không thể chia sẻ ebook này');
+      Alert.alert("Bạn không thể chia sẻ ebook này");
       return;
     }
   };
 
-  const handleContentDetails = item => {
-    navigation.navigate('LearningEbookScreen', {
+  const handleContentDetails = (item) => {
+    navigation.navigate("LearningEbookScreen", {
       item,
     });
   };
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
+      "hardwareBackPress",
       handleBackPress,
     );
     return () => {
@@ -291,9 +334,9 @@ const EbookDetails = () => {
       if (response?.data?.product) {
         setEbookDetails(response?.data?.product);
         setActiveThumbnail(response?.data?.product?.thumbnail);
-        const productIdTemp = last(
-          response?.data?.product?.url?.split('/') || [],
-        );
+        const productIdTemp = (last(
+          response?.data?.product?.url?.split("/") || [],
+        ) || "") as string;
         setProductId(productIdTemp);
         if (
           response?.data?.product?.price === 0 &&
@@ -305,40 +348,21 @@ const EbookDetails = () => {
         }
         if (accessToken && response?.data?.product?.price !== 0) {
           const res = (await Services.getPurchaseEbook()).data;
-          console.log('res', res?.data?.orders);
-          console.log('id', id);
+          console.log("res", res?.data?.orders);
+          console.log("id", id);
           const filePath = res?.data?.orders?.filter(
-            item => String(item.product_id) === String(id),
+            (item: any) => String(item.product_id) === String(id),
           );
-          console.log('filePath', filePath);
+          console.log("filePath", filePath);
           if (filePath.length > 0) {
             setIsCheck(true);
             if (filePath[0]?.file?.length > 0) {
               setFile(filePath[0]?.file[0]?.path);
             }
           } else {
-            if (Platform.OS === 'ios') {
-              if (transaction[user?.email]?.includes(productIdTemp)) {
+            if (Platform.OS === "ios") {
+              if (transaction[user?.email || ""]?.includes(productIdTemp)) {
                 await handleUpdatePurchaseBackend();
-              } else {
-                await RNIap.initConnection();
-                // clear transactionIos to show purchase by username
-                await RNIap.clearTransactionIOS();
-                // get list products for function RNIap.requestPurchase
-                console.log("productIdTemp",productIdTemp)
-                await RNIap.fetchProducts({
-                  skus: [productIdTemp],
-                })
-                  .then(res => {
-                    if (!res?.length) {
-                      setIosRNIapState(false);
-                    } else {
-                      setIosRNIapState(true);
-                    }
-                  })
-                  .catch(() => {
-                    setIosRNIapState(false);
-                  });
               }
             }
           }
@@ -349,53 +373,35 @@ const EbookDetails = () => {
   };
 
   const notLoggedIn = () => {
-    return Alert.alert('Bạn chưa đăng nhập', 'Bạn cần đăng nhập để mua ebook', [
+    return Alert.alert("Bạn chưa đăng nhập", "Bạn cần đăng nhập để mua ebook", [
       {
-        text: 'Hủy',
+        text: "Hủy",
         onPress: () => {},
-        style: 'cancel',
+        style: "cancel",
       },
       {
-        text: 'Đăng nhập',
+        text: "Đăng nhập",
         onPress: () =>
-          navigation.navigate('auth/login', {
-            screen: 'EbooksDetailsScreen',
+          navigation.navigate("auth/login", {
+            screen: "EbooksDetailsScreen",
             id,
           }),
       },
     ]);
   };
 
+  // Fetch products when connected
   useEffect(() => {
-    const purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
-      async purchase => {
-        console.log('purchase updated:', purchase);
-
-        if (purchase.transactionId) {
-          await handleUpdatePurchaseBackend();
-
-          if (Platform.OS === 'ios') {
-            await RNIap.finishTransaction(purchase, false);
-          }
-        }
-      },
-    );
-
-    const purchaseErrorSubscription = RNIap.purchaseErrorListener(error => {
-      console.log('purchase error:', error);
-      Alert.alert('Lỗi', 'Thanh toán thất bại hoặc bị hủy');
-    });
-
-    return () => {
-      purchaseUpdateSubscription.remove();
-      purchaseErrorSubscription.remove();
-    };
-  }, []);
+    if (connected && productId) {
+      console.log("IAP Connected, fetching products...");
+      fetchProducts({ skus: [productId], type: "in-app" });
+    }
+  }, [connected, productId, fetchProducts]);
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: '#fff', paddingHorizontal: 16 }}
-      edges={['top']}
+      style={{ flex: 1, backgroundColor: "#fff", paddingHorizontal: 16 }}
+      edges={["top"]}
     >
       <View style={styles.header}>
         <View style={[styles.header1]}>
@@ -424,11 +430,11 @@ const EbookDetails = () => {
             >
               <View
                 style={{
-                  height: '100%',
+                  height: "100%",
                   padding: 16,
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-end',
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "flex-end",
                 }}
               >
                 <View style={styles.expireWrapper}>
@@ -443,7 +449,7 @@ const EbookDetails = () => {
                 <TouchableOpacity
                   style={[
                     styles.expireWrapper,
-                    { flexDirection: 'row', alignItems: 'center', gap: 4 },
+                    { flexDirection: "row", alignItems: "center", gap: 4 },
                   ]}
                   onPress={() => handleShareFile()}
                 >
@@ -458,9 +464,9 @@ const EbookDetails = () => {
               </Text>
               <View
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
                 <Text style={styles.infoTitle}>{ebookDetails?.title}</Text>
@@ -473,8 +479,8 @@ const EbookDetails = () => {
               </View>
               <View
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
+                  flexDirection: "row",
+                  alignItems: "center",
                   gap: 8,
                   marginTop: 8,
                 }}
@@ -482,8 +488,8 @@ const EbookDetails = () => {
                 {ebookDetails?.rate ? (
                   <View
                     style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
+                      flexDirection: "row",
+                      alignItems: "center",
                       gap: 8,
                     }}
                   >
@@ -508,7 +514,7 @@ const EbookDetails = () => {
                 <Text
                   style={styles.availability}
                 >{`Còn hàng: ${ebookDetails?.availability}`}</Text>
-              ) : ebookDetails?.availability === 'Unlimited' ? (
+              ) : ebookDetails?.availability === "Unlimited" ? (
                 <Text style={styles.unlimited}>Không giới hạn</Text>
               ) : (
                 <Text style={styles.stock}>Hết hàng</Text>
@@ -520,8 +526,8 @@ const EbookDetails = () => {
               >
                 <View
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
+                    flexDirection: "row",
+                    alignItems: "center",
                     marginTop: 8,
                   }}
                 >
@@ -542,8 +548,8 @@ const EbookDetails = () => {
                       style={[
                         styles.content,
                         {
-                          textDecorationLine: 'line-through',
-                          color: '#314753',
+                          textDecorationLine: "line-through",
+                          color: "#314753",
                         },
                       ]}
                     >
@@ -551,7 +557,7 @@ const EbookDetails = () => {
                     </Text>
                   ) : null}
                 </View>
-                <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                <View style={{ flexDirection: "row", marginTop: 8 }}>
                   {ebookDetails?.discount_percent !== 0 ? (
                     <Text
                       style={styles.txt2}
@@ -559,13 +565,13 @@ const EbookDetails = () => {
                   ) : null}
                 </View>
               </View>
-              {(isCheck && file && iosRNIapState) ||
-              (isCheck && file && Platform.OS === 'android') ||
+              {(isCheck && file && Platform.OS === "ios") ||
+              (isCheck && file && Platform.OS === "android") ||
               (file && ebookDetails?.price === 0) ? (
                 <TouchableOpacity
-                  style={[styles.btnSubmit, { backgroundColor: '#1180C3' }]}
+                  style={[styles.btnSubmit, { backgroundColor: "#1180C3" }]}
                   onPress={() => {
-                    navigation.navigate('pdf', {
+                    navigation.navigate("pdf", {
                       title: ebookDetails?.title,
                       uri: `${WEB_URL}${file}`,
                     });
@@ -573,14 +579,14 @@ const EbookDetails = () => {
                 >
                   <Text style={styles.txtSubmit}>Xem ebook</Text>
                 </TouchableOpacity>
-              ) : isCheck || !iosRNIapState ? (
+              ) : isCheck ? (
                 <Text
                   style={{
                     marginTop: 8,
                     fontSize: 20,
-                    textAlign: 'center',
-                    color: '#25C2E8',
-                    fontWeight: 'bold',
+                    textAlign: "center",
+                    color: "#25C2E8",
+                    fontWeight: "bold",
                   }}
                 >
                   Ebook sắp xuất bản
@@ -589,19 +595,19 @@ const EbookDetails = () => {
                 <TouchableOpacity
                   style={[
                     styles.btnSubmit,
-                    { backgroundColor: file ? '#C4C4C4' : '#1180C3' },
+                    { backgroundColor: file ? "#C4C4C4" : "#1180C3" },
                   ]}
                   onPress={() => handleContactAssistant(ebookDetails?.title)}
                 >
                   <Text style={styles.txtSubmit}>
-                    {' '}
-                    {Platform.OS === 'android' ? 'Liên hệ ngay' : 'Mua ebook'}
+                    {" "}
+                    {Platform.OS === "android" ? "Liên hệ ngay" : "Mua ebook"}
                   </Text>
                 </TouchableOpacity>
               )}
             </View>
             <View style={{ marginTop: 32, marginBottom: 8 }}>
-              <View style={{ flexDirection: 'row', gap: 16 }}>
+              <View style={{ flexDirection: "row", gap: 16 }}>
                 <TouchableOpacity onPress={() => setActiveTab(0)}>
                   <Text style={[styles.tab]}>Mô tả</Text>
                   {activeTab === 0 && (
@@ -609,7 +615,7 @@ const EbookDetails = () => {
                       style={{
                         marginTop: 4,
                         height: 2,
-                        backgroundColor: '#1180C3',
+                        backgroundColor: "#1180C3",
                       }}
                     ></View>
                   )}
@@ -622,7 +628,7 @@ const EbookDetails = () => {
                         style={{
                           marginTop: 4,
                           height: 2,
-                          backgroundColor: '#1180C3',
+                          backgroundColor: "#1180C3",
                         }}
                       ></View>
                     )}
@@ -635,7 +641,7 @@ const EbookDetails = () => {
                       style={{
                         marginTop: 4,
                         height: 2,
-                        backgroundColor: '#1180C3',
+                        backgroundColor: "#1180C3",
                       }}
                     ></View>
                   )}
@@ -705,7 +711,7 @@ const EbookDetails = () => {
               <View>
                 {ebookDetails?.files && ebookDetails?.files?.length >= 2 ? (
                   <View>
-                    {ebookDetails?.files?.slice(1).map(item => (
+                    {ebookDetails?.files?.slice(1).map((item: any) => (
                       <TouchableOpacity
                         key={item?.id}
                         style={styles.contentWrapper}
@@ -729,8 +735,8 @@ const EbookDetails = () => {
                   <View>
                     <View
                       style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
+                        flexDirection: "row",
+                        alignItems: "center",
                         gap: 8,
                       }}
                     >
@@ -740,9 +746,9 @@ const EbookDetails = () => {
                         }>{`Đánh giá (${ebookDetails?.reviews?.length})`}</Text> */}
                       <View
                         style={{
-                          width: '100%',
+                          width: "100%",
                           height: 2,
-                          backgroundColor: '#f1f1f1',
+                          backgroundColor: "#f1f1f1",
                         }}
                       />
                     </View>
@@ -751,25 +757,25 @@ const EbookDetails = () => {
                         marginTop: 8,
                         borderRadius: 6,
                         borderWidth: 1,
-                        borderColor: '#F3F3F3',
+                        borderColor: "#F3F3F3",
                         paddingVertical: 4,
                         paddingHorizontal: 8,
                         minHeight: 80,
-                        fontFamily: 'Inter-Regular',
-                        color: '#000',
+                        fontFamily: "Inter-Regular",
+                        color: "#000",
                       }}
                       multiline
                       numberOfLines={5}
                       textAlignVertical="top"
                       placeholder="Nhập mô tả"
                       value={description}
-                      onChangeText={value => setDescription(value)}
+                      onChangeText={(value) => setDescription(value)}
                     />
                     <View
                       style={{
                         marginTop: 8,
-                        flexDirection: 'row',
-                        justifyContent: 'space-around',
+                        flexDirection: "row",
+                        justifyContent: "space-around",
                       }}
                     >
                       <View>
@@ -783,7 +789,7 @@ const EbookDetails = () => {
                             jumpValue={0}
                             startingValue={5}
                             ratingColor="#FBC815"
-                            onFinishRating={value => setProductQuality(value)}
+                            onFinishRating={(value) => setProductQuality(value)}
                           />
                         </View>
                         <View style={{ paddingHorizontal: 16 }}>
@@ -794,15 +800,17 @@ const EbookDetails = () => {
                             jumpValue={0}
                             startingValue={5}
                             ratingColor="#FBC815"
-                            onFinishRating={value => setDeliveryQuality(value)}
+                            onFinishRating={(value) =>
+                              setDeliveryQuality(value)
+                            }
                           />
                         </View>
                       </View>
                       <View
                         style={{
                           width: 1,
-                          height: '100%',
-                          backgroundColor: '#ececec',
+                          height: "100%",
+                          backgroundColor: "#ececec",
                         }}
                       />
                       <View>
@@ -816,7 +824,9 @@ const EbookDetails = () => {
                             jumpValue={0}
                             startingValue={5}
                             ratingColor="#FBC815"
-                            onFinishRating={value => setPurchaseQuality(value)}
+                            onFinishRating={(value) =>
+                              setPurchaseQuality(value)
+                            }
                           />
                         </View>
                         <View style={{ paddingHorizontal: 16 }}>
@@ -827,7 +837,7 @@ const EbookDetails = () => {
                             jumpValue={0}
                             startingValue={5}
                             ratingColor="#FBC815"
-                            onFinishRating={value => setSellerQuantity(value)}
+                            onFinishRating={(value) => setSellerQuantity(value)}
                           />
                         </View>
                       </View>
@@ -846,34 +856,34 @@ const EbookDetails = () => {
                     </TouchableOpacity>
                   </View>
                 )}
-                {ebookDetails?.reviews?.map(item => (
+                {ebookDetails?.reviews?.map((item) => (
                   <View style={styles.reviewWrapper} key={item.id}>
                     <View
                       style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
+                        flexDirection: "row",
+                        justifyContent: "space-between",
                         gap: 32,
                       }}
                     >
                       <View
                         style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          width: '50%',
+                          flexDirection: "row",
+                          alignItems: "center",
+                          width: "50%",
                         }}
                       >
                         <Image
                           source={{
                             uri:
                               item?.user?.avatar ||
-                              'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMjCj43UJiVu-3Qp9b5yj-SwLGR-kndCzqLaiMv5SMkITd4CcbQQ7vX_CEZd-xxqka8ZM&usqp=CAU',
+                              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMjCj43UJiVu-3Qp9b5yj-SwLGR-kndCzqLaiMv5SMkITd4CcbQQ7vX_CEZd-xxqka8ZM&usqp=CAU",
                           }}
                           style={styles.avatar}
                         />
                         <View
                           style={{
-                            flexDirection: 'column',
-                            alignItems: 'flex-start',
+                            flexDirection: "column",
+                            alignItems: "flex-start",
                             marginLeft: 8,
                             gap: 4,
                           }}
@@ -881,7 +891,7 @@ const EbookDetails = () => {
                           <Text>{item?.user?.full_name}</Text>
                           <Text>
                             {moment(item.created_at * 1000).format(
-                              'HH:mm DD/MM/YYYY',
+                              "HH:mm DD/MM/YYYY",
                             )}
                           </Text>
                           <Rating
@@ -909,39 +919,39 @@ const EbookDetails = () => {
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   header1: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   iconBack: {
     width: 14,
     height: 14,
-    resizeMode: 'contain',
-    tintColor: '#000',
+    resizeMode: "contain",
+    tintColor: "#000",
   },
   title: {
     flex: 1,
     fontSize: 24,
     lineHeight: 36,
-    fontWeight: '500',
-    textAlign: 'center',
-    color: '#000',
+    fontWeight: "500",
+    textAlign: "center",
+    color: "#000",
   },
   thumbnail: {
-    width: '100%',
+    width: "100%",
     height: deviceWidth * 0.8,
-    resizeMode: 'contain',
+    resizeMode: "contain",
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   expireWrapper: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -949,129 +959,129 @@ const styles = StyleSheet.create({
   iconShare: {
     width: 16,
     height: 16,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   share: {
     fontSize: 12,
-    color: '#000',
+    color: "#000",
   },
   infoWrapper: {
     marginTop: 16,
     padding: 16,
-    backgroundColor: '#ebf7ff',
+    backgroundColor: "#ebf7ff",
     borderRadius: 12,
   },
   infoCate: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 8,
   },
   infoTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: "bold",
+    color: "#000",
     flex: 1,
   },
   iconDown: {
     width: 24,
     height: 24,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   rate: {
     fontSize: 14,
-    color: '#000',
+    color: "#000",
     marginLeft: 4,
   },
   reviews: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   availability: {
     fontSize: 14,
-    color: '#4CAF50',
+    color: "#4CAF50",
     marginTop: 8,
   },
   unlimited: {
     fontSize: 14,
-    color: '#4CAF50',
+    color: "#4CAF50",
     marginTop: 8,
   },
   stock: {
     fontSize: 14,
-    color: '#F44336',
+    color: "#F44336",
     marginTop: 8,
   },
   icon: {
     width: 20,
     height: 20,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   txt3: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#25C2E8',
+    fontWeight: "bold",
+    color: "#25C2E8",
   },
   content: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   txt2: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   btnSubmit: {
-    backgroundColor: '#1180C3',
+    backgroundColor: "#1180C3",
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 16,
   },
   txtSubmit: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   tab: {
     fontSize: 16,
-    color: '#0B2337',
+    color: "#0B2337",
     fontWeight: 500,
     paddingVertical: 8,
   },
   contentWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   contentText: {
     fontSize: 14,
-    color: '#000',
+    color: "#000",
     marginLeft: 8,
     flex: 1,
   },
   btnReview: {
-    backgroundColor: '#1180C3',
+    backgroundColor: "#1180C3",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 4,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   txtReview: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 14,
   },
   quality: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginBottom: 4,
   },
   reviewWrapper: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   avatar: {
     width: 40,
@@ -1080,7 +1090,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#000',
+    color: "#000",
     marginTop: 8,
   },
 });

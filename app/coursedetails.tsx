@@ -30,7 +30,7 @@ import {
   View,
 } from "react-native";
 import Accordion from "react-native-collapsible/Accordion";
-import * as RNIap from "react-native-iap";
+import { ErrorCode, useIAP } from "react-native-iap";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Rating } from "react-native-ratings";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -47,7 +47,7 @@ const CourseDetails = () => {
   const user = useSelector((state: RootState) => state.auth?.user);
   const productIAP = useSelector((state: RootState) => state.productIAP);
   const accessToken = useSelector(
-    (state: RootState) => state.auth?.accessToken
+    (state: RootState) => state.auth?.accessToken,
   );
 
   // State management - separated for better control
@@ -63,7 +63,6 @@ const CourseDetails = () => {
   const [purchase, setPurchase] = useState(false);
   const [productId, setProductId] = useState("");
   console.log("productId", productId);
-  const [iosRNIapState, setIosRNIapState] = useState(true);
 
   // Review States
   const [description, setDescription] = useState("");
@@ -74,6 +73,67 @@ const CourseDetails = () => {
   const [supportQuantity, setSupportQuantity] = useState(5);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPurchase, setLoadingPurchase] = useState(false);
+
+  // Initialize IAP hook
+  const { connected, fetchProducts, requestPurchase, finishTransaction } =
+    useIAP({
+      onPurchaseSuccess: async (purchase) => {
+        console.log("Purchase success:", purchase);
+
+        try {
+          await finishTransaction({ purchase, isConsumable: false });
+
+          // Update backend
+          await Services.iOSBuyCourse({ webinar_id: id });
+          await dispatch(
+            saveProductTransactionIAP({
+              username: user.info?.email,
+              productIds: (
+                productIAP.transaction[user.info?.email || ""] || []
+              ).filter((f) => f !== productId),
+            }),
+          );
+
+          setPurchase(true);
+          setLoadingPurchase(false);
+
+          Alert.alert(
+            "Thanh toán thành công",
+            "Bạn đã mua khóa học thành công!",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  getData();
+                },
+              },
+            ],
+          );
+        } catch (err) {
+          console.error("Error finishing transaction:", err);
+          setLoadingPurchase(false);
+
+          // Still try to push transaction to local storage
+          await dispatch(
+            pushProductTransactionIAP({
+              username: user.info?.email,
+              productId: productId,
+            }),
+          );
+        }
+      },
+      onPurchaseError: (error) => {
+        console.error("Purchase error:", error);
+        setLoadingPurchase(false);
+
+        if (error.code !== ErrorCode.UserCancelled) {
+          Alert.alert(
+            "Lỗi thanh toán",
+            error.message || "Đã xảy ra lỗi khi mua khóa học",
+          );
+        }
+      },
+    });
 
   // Legacy states - removed unused ones
 
@@ -107,46 +167,46 @@ const CourseDetails = () => {
         saveProductTransactionIAP({
           username: user.info?.email,
           productIds: (transaction[user.info?.email || ""] || []).filter(
-            (f) => f !== productId
+            (f) => f !== productId,
           ),
-        })
+        }),
       );
     } catch {
       await dispatch(
         pushProductTransactionIAP({
           username: user.info?.email,
           productId: productId,
-        })
+        }),
       );
     }
   }, [id, productIAP, productId, user?.info?.email, dispatch]);
 
   // Tách logic xử lý purchase để tái sử dụng
-  const handlePurchaseLogicRef = React.useRef<((transaction: any) => Promise<void>) | null>(null);
-  
+  const handlePurchaseLogicRef = React.useRef<
+    ((transaction: any) => Promise<void>) | null
+  >(null);
+
   handlePurchaseLogicRef.current = async (transaction: any) => {
     if (Platform.OS === "ios" && productId) {
       if (transaction[user?.info?.email]?.includes(productId)) {
         await handleUpdatePurchaseBackend();
-      } else {
-        try {
-          await RNIap.initConnection();
-          await RNIap.clearTransactionIOS();
-          const products = await RNIap.fetchProducts({ skus: [productId] });
-          setIosRNIapState((products?.length ?? 0) > 0);
-        } catch (error: any) {
-          console.log(error.message || "Error when connection react-native-iap");
-          setIosRNIapState(false);
-        }
       }
     }
   };
+
+  // Fetch products when connected
+  useEffect(() => {
+    if (connected && productId) {
+      console.log("IAP Connected, fetching products...");
+      fetchProducts({ skus: [productId], type: "in-app" });
+    }
+  }, [connected, productId, fetchProducts]);
 
   // Data fetching
   const getData = useCallback(async () => {
     // Prevent concurrent calls
     if (isLoading) return;
-    
+
     const { transaction } = productIAP;
     setIsLoading(true);
 
@@ -165,7 +225,8 @@ const CourseDetails = () => {
 
     // API 2: Course Content
     try {
-      responseContent = (await Services.contentCourseDetails(id as string)).data;
+      responseContent = (await Services.contentCourseDetails(id as string))
+        .data;
       console.log("✅ Course content loaded successfully");
     } catch (error: any) {
       console.log("❌ Course content failed:", error.message);
@@ -186,9 +247,7 @@ const CourseDetails = () => {
 
     // Xử lý purchase status
     if (purchase?.data?.webinars) {
-      const res = purchase.data.webinars.find(
-        (item) => String(item.id) === id
-      );
+      const res = purchase.data.webinars.find((item) => String(item.id) === id);
       if (res) {
         setPurchase(true);
       } else {
@@ -241,20 +300,20 @@ const CourseDetails = () => {
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
-      handleBackPress
+      handleBackPress,
     );
     const eventListener = DeviceEventEmitter.addListener(
       "loadCourseDetail",
-      refreshData
+      refreshData,
     );
 
     const keyboardDidShowListener = Keyboard.addListener(
       "keyboardDidShow",
-      keyboardDidShow
+      keyboardDidShow,
     );
     const keyboardDidHideListener = Keyboard.addListener(
       "keyboardDidHide",
-      keyboardDidHide
+      keyboardDidHide,
     );
 
     return () => {
@@ -288,7 +347,7 @@ const CourseDetails = () => {
       }
       Alert.alert("Thông báo", "Bạn cần mua khóa học để tiếp tục");
     },
-    [navigation, id, accessToken, purchase]
+    [navigation, id, accessToken, purchase],
   );
 
   // Contact/Purchase handler
@@ -305,40 +364,39 @@ const CourseDetails = () => {
           type: "course",
         });
       } else {
+        if (loadingPurchase || !connected) return;
+
         try {
           if (!productId) {
             Alert.alert("Lỗi", "Mã sản phẩm không hợp lệ");
             return;
           }
+
           setLoadingPurchase(true);
-          RNIap.requestPurchase({
+          await requestPurchase({
             request: {
-              ios: {
-                sku: productId,
-              },
+              ios: { sku: productId },
             },
-            type: "inapp",
-          })
-            .then(async (res) => {
-              // console.log("res",res)
-              // call api to backend update purchase todo
-              // await handleUpdatePurchaseBackend();
-              // call api to backend update purchase todo
-            })
-            .catch((err) => {
-              console.log(err);
-              Alert.alert("Lỗi", "Đã xảy ra lỗi khi mua khóa học");
-            })
-            .finally(() => {
-              setLoadingPurchase(false);
-            });
-        } catch (error) {
-          Alert.alert("Lỗi", "Đã xảy ra lỗi khi mua khóa học");
+            type: "in-app",
+          });
+        } catch (err: any) {
+          console.error("Error requesting purchase:", err);
           setLoadingPurchase(false);
+
+          if (err.code !== ErrorCode.UserCancelled) {
+            Alert.alert("Lỗi", "Đã xảy ra lỗi khi mua khóa học");
+          }
         }
       }
     },
-    [accessToken, course, productId]
+    [
+      accessToken,
+      course,
+      productId,
+      loadingPurchase,
+      connected,
+      requestPurchase,
+    ],
   );
 
   // Login prompt
@@ -541,32 +599,6 @@ const CourseDetails = () => {
     );
   };
 
-  useEffect(() => {
-    const purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
-      async (purchase) => {
-        console.log("purchase updated:", purchase);
-
-        if (purchase.transactionId) {
-          await handleUpdatePurchaseBackend();
-
-          if (Platform.OS === "ios") {
-            await RNIap.finishTransaction({ purchase, isConsumable: false });
-          }
-        }
-      }
-    );
-
-    const purchaseErrorSubscription = RNIap.purchaseErrorListener((error) => {
-      console.log("purchase error:", error);
-      Alert.alert("Lỗi", "Thanh toán thất bại hoặc bị hủy");
-    });
-
-    return () => {
-      purchaseUpdateSubscription.remove();
-      purchaseErrorSubscription.remove();
-    };
-  }, [handleUpdatePurchaseBackend]);
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
@@ -711,7 +743,7 @@ const CourseDetails = () => {
                           width="560"
                           height="315"
                           src="https://www.youtube.com/embed/${getIDfromURL(
-                            course?.video_demo
+                            course?.video_demo,
                           )}"
                           title="YouTube video player"
                           frameborder="0"
